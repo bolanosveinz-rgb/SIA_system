@@ -5,7 +5,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { CalendarClock, LocateFixed, MapPin, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { ResidentSidebar } from "@/components/resident-sidebar";
 import { Button, Card, Input, Textarea } from "@/components/ui";
 import { BARANGAYS, isInsideTupi } from "@/lib/places";
 import { uploadToCloudinary } from "@/lib/upload";
@@ -118,7 +117,7 @@ export default function MapPage() {
     }
   }
 
-  return <ResidentSidebar>
+  return <>
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">
       <div className="mb-6"><Link href="/" className="text-sm font-semibold text-[var(--muted)] hover:text-[#0d9b91]">← Back to home</Link><div className="mt-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="mb-2 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[.15em] text-[#0d9b91]"><LocateFixed size={14} /> Community map</div><h1 className="text-3xl font-extrabold tracking-tight">Tupi, on the map.</h1><p className="mt-1 text-sm text-[var(--muted)]">Explore community reports or tap a location to report an issue.</p></div><div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-xs text-[var(--muted)]"><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef7951]" />{reports.length} community reports</div></div></div>
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -132,5 +131,5 @@ export default function MapPage() {
         </aside>
       </div>
     </main>
-  </ResidentSidebar>;
+  </>;
 }

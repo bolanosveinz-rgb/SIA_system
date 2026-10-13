@@ -24,6 +24,7 @@ type Props = {
   email: string;
   profilePhotoUrl?: string | null;
   collapsed: boolean;
+  mobileNavOpen?: boolean;
   onToggleSidebar: () => void;
 };
 
@@ -49,7 +50,7 @@ function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, collapsed, onToggleSidebar }: Props) {
+export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, collapsed, mobileNavOpen = false, onToggleSidebar }: Props) {
   const pathname = usePathname();
   const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
@@ -168,8 +169,8 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
 
   return <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--surface)]/90 shadow-[0_4px_20px_rgba(15,40,60,.04)] backdrop-blur-xl">
     <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6">
-      <button type="button" onClick={onToggleSidebar} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--muted)] transition hover:border-[#0d9b91]/30 hover:bg-[var(--accent-soft)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91]">
-        <Menu size={19} />
+      <button type="button" onClick={onToggleSidebar} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen} title={mobileNavOpen ? "Close navigation" : "Open navigation"} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--muted)] transition hover:border-[#0d9b91]/30 hover:bg-[var(--accent-soft)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:hidden">
+        {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
       </button>
       <div className="min-w-0 flex-1">
         <p className="truncate text-base font-extrabold tracking-tight sm:text-lg">{title[0]}</p>
@@ -179,7 +180,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
         <button type="button" onClick={toggleTheme} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"} className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91]">
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-        <div className="relative" ref={notificationBox}>
+        {isAuthenticated && <div className="relative" ref={notificationBox}>
           <button type="button" onClick={() => { const next = !open; setOpen(next); if (next) void loadNotifications(); }} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91]">
             <Bell size={19} />
             {unread > 0 && <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-[var(--surface)] bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">{unread > 99 ? "99+" : unread}</span>}
@@ -190,7 +191,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
               <div className="flex items-center gap-1">
                 {unread > 0 && <button type="button" onClick={() => void markAllRead()} disabled={markingRead} aria-label="Mark all notifications as read" title="Mark all as read" className="flex h-9 w-9 items-center justify-center rounded-lg text-[#0d9b91] hover:bg-[var(--accent-soft)] disabled:opacity-50"><CheckCheck size={17} /></button>}
                 <button type="button" onClick={() => setOpen(false)} aria-label="Close notifications" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] hover:bg-[var(--background)]"><X size={17} /></button>
-              </div>
+              </div>}
             </div>
             <div className="max-h-[min(28rem,65vh)] overflow-y-auto">
               {loading && !notifications.length ? <div className="space-y-3 p-4"><div className="h-3 w-2/3 animate-pulse rounded bg-[var(--line)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /></div>

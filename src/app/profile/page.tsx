@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Camera, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card } from "@/components/ui";
-import { ResidentSidebar } from "@/components/resident-sidebar";
 import { uploadToCloudinary } from "@/lib/upload";
 
 type Profile = {
@@ -90,7 +89,7 @@ export default function ResidentProfilePage() {
 
   const currentPhoto = removePhoto ? "" : preview || profile?.profile?.profilePhotoUrl || "";
 
-  return <ResidentSidebar>
+  return <>
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <p className="text-xs font-bold uppercase tracking-[.15em] text-[#0d9b91]">Resident account</p>
       <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">My profile</h1>
@@ -116,5 +115,5 @@ export default function ResidentProfilePage() {
         <p className="text-xs text-[var(--muted)]">JPG, PNG, or WebP · Maximum 10 MB</p>
       </Card>}
     </main>
-  </ResidentSidebar>;
+  </>;
 }

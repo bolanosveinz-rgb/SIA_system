@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { PortalShell } from "@/components/portal-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        {children}
+        <PortalShell>{children}</PortalShell>
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
