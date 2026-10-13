@@ -1,7 +1,7 @@
 import { compare, hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
-import { isSameOrigin, requireUser } from "@/lib/auth";
+import { isSameOrigin, requireUser, setSessionCookie } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
@@ -27,7 +27,9 @@ export async function GET() {
       where: { id: user.id },
       select: { name: true, email: true, adminProfile: true },
     });
-    return NextResponse.json({ profile });
+    const response = NextResponse.json({ profile });
+    await setSessionCookie(response, { id: user.id, name: profile?.name ?? user.name, email: profile?.email ?? user.email, role: Role.ADMIN });
+    return response;
   } catch (error) {
     return routeError(error);
   }
@@ -66,7 +68,9 @@ export async function PUT(request: NextRequest) {
       },
       select: { name: true, email: true, adminProfile: true },
     });
-    return NextResponse.json({ profile });
+    const response = NextResponse.json({ profile });
+    await setSessionCookie(response, { id: user.id, name: profile.name, email: profile.email, role: Role.ADMIN });
+    return response;
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
     return routeError(error);

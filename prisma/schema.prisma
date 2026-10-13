@@ -53,7 +53,7 @@ model ResidentProfile {
   userId    String   @unique
   phone     String
   barangay  String
-  address   String
+  address   String   @db.VarChar(300)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,7 +66,7 @@ model AdminProfile {
   userId      String   @unique
   officeName  String   @default("Municipality of Tupi")
   contact     String   @default("")
-  address     String   @default("")
+  address     String   @default("") @db.VarChar(300)
   logoUrl     String?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
@@ -91,8 +91,8 @@ model News {
 model NewsMedia {
   id        String    @id @default(cuid())
   newsId    String
-  url       String
-  publicId  String
+  url       String    @db.VarChar(2048)
+  publicId  String    @db.VarChar(255)
   type      MediaType
   news      News      @relation(fields: [newsId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
@@ -130,11 +130,11 @@ model Report {
   description String       @db.Text
   lat         Float
   lng         Float
-  address     String       @default("")
+  address     String       @default("") @db.VarChar(300)
   barangay    String       @default("")
   status      ReportStatus @default(PENDING)
-  photoUrl    String?
-  photoPublicId String?
+  photoUrl    String?      @db.VarChar(2048)
+  photoPublicId String?    @db.VarChar(255)
   remarks     String?      @db.Text
   residentId  String
   resident    User         @relation(fields: [residentId], references: [id], onDelete: Restrict)
@@ -153,7 +153,7 @@ model Notification {
   userId    String
   reportId  String?
   type      NotificationType
-  message   String
+  message   String           @db.VarChar(500)
   readAt    DateTime?
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   report    Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)

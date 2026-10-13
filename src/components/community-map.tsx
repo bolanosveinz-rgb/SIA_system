@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents, Rectangle } from "react-leaflet";
+import { GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
-import { TUPI_BOUNDS, TUPI_CENTER } from "@/lib/places";
+import { TUPI_BOUNDARY, TUPI_BOUNDS, TUPI_CENTER } from "@/lib/places";
 import { StatusBadge } from "@/components/ui";
 
 type MapReport = {
@@ -72,7 +72,7 @@ export function CommunityMap({
   return <div className="relative z-0 overflow-hidden rounded-2xl border border-[var(--line)]" style={{ height }}>
     <MapContainer center={TUPI_CENTER} zoom={13} minZoom={11} maxZoom={18} maxBounds={bounds} maxBoundsViscosity={1} scrollWheelZoom className="h-full w-full" aria-label="Interactive map of Tupi, South Cotabato">
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Rectangle bounds={bounds} pathOptions={{ color: "#0d9b91", weight: 2, dashArray: "7 7", fill: false, opacity: 0.7 }} />
+      <GeoJSON data={TUPI_BOUNDARY} style={{ color: "#0d9b91", weight: 2, fillColor: "#0d9b91", fillOpacity: 0.07 }} />
       <ClickHandler onSelect={onSelect} />
       <HeatLayer reports={reports} />
       {reports.map((report) => <Marker key={report.id} position={[report.lat, report.lng]} icon={reportIcon}>
@@ -80,6 +80,6 @@ export function CommunityMap({
       </Marker>)}
       {selected && <Marker position={[selected.lat, selected.lng]} icon={pinIcon}><Popup>Selected report location</Popup></Marker>}
     </MapContainer>
-    <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-lg border border-white/80 bg-white/90 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm">Map extent shown is approximate · © OpenStreetMap</div>
+    <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-lg border border-white/80 bg-white/90 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm">Tupi municipal boundary · © OpenStreetMap</div>
   </div>;
 }

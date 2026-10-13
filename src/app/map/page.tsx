@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { CalendarClock, LocateFixed, MapPin, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
-import { CommunityMap } from "@/components/community-map";
 import { Button, Card, Input, Textarea } from "@/components/ui";
 import { BARANGAYS, isInsideTupi } from "@/lib/places";
 import { uploadToCloudinary } from "@/lib/upload";
+
+const CommunityMap = dynamic(() => import("@/components/community-map").then((module) => module.CommunityMap), {
+  ssr: false,
+  loading: () => <div className="h-[min(64vh,660px)] animate-pulse rounded-2xl bg-[var(--line)]" />,
+});
 
 type ReportPin = { id: string; title: string; lat: number; lng: number; status: string; createdAt: string };
 type User = { id: string; role: "ADMIN" | "RESIDENT"; profile?: { barangay?: string } | null };
@@ -23,13 +28,28 @@ export default function MapPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    fetch("/api/auth/me").then((response) => response.json()).then((data) => setUser(data.user)).catch(() => setUser(null));
-    fetch("/api/reports").then(async (response) => {
-      if (response.ok) {
-        const data = await response.json();
-        setReports(data.reports);
+    let active = true;
+    let timer: number | undefined;
+    const load = async () => {
+      try {
+        const session = await fetch("/api/auth/me").then((response) => response.json());
+        if (!active) return;
+        setUser(session.user);
+        const url = session.user?.role === "ADMIN" ? "/api/reports" : "/api/reports/map";
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          if (active) setReports(data.reports);
+        } else if (response.status !== 401) {
+          throw new Error("Report locations could not be loaded.");
+        }
+      } catch (error) {
+        if (active) toast.error(error instanceof Error ? error.message : "Report locations could not be loaded.");
       }
-    }).catch(() => toast.error("Report locations could not be loaded."));
+    };
+    void load();
+    timer = window.setInterval(() => void load(), 30000);
+    return () => { active = false; if (timer) window.clearInterval(timer); };
   }, []);
 
   async function selectLocation(lat: number, lng: number) {
@@ -52,6 +72,7 @@ export default function MapPage() {
 
   async function submitReport(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!selected) return toast.error("Select a location on the map first.");
     if (!user) return toast.error("Sign in or create an account to submit a report.");
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
@@ -82,7 +103,7 @@ export default function MapPage() {
       setSelected(null);
       setPhoto(null);
       setUploadProgress(0);
-      event.currentTarget.reset();
+      form.reset();
       toast.success("Report sent to the LGU. Thank you for speaking up!");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Your report could not be submitted.");

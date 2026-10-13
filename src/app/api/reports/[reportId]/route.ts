@@ -19,18 +19,21 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const parsed = updateSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
     const { reportId } = await params;
-    const report = await prisma.report.update({
-      where: { id: reportId },
-      data: { status: parsed.data.status, remarks: parsed.data.remarks ?? null },
-      include: { resident: { select: { name: true } } },
-    });
-    await prisma.notification.create({
-      data: {
-        userId: report.residentId,
-        reportId: report.id,
-        type: NotificationType.REPORT_UPDATED,
-        message: `Your report "${report.title}" is now ${report.status.replace("_", " ").toLowerCase()}.`,
-      },
+    const report = await prisma.$transaction(async (transaction) => {
+      const updated = await transaction.report.update({
+        where: { id: reportId },
+        data: { status: parsed.data.status, remarks: parsed.data.remarks ?? null },
+        include: { resident: { select: { name: true } } },
+      });
+      await transaction.notification.create({
+        data: {
+          userId: updated.residentId,
+          reportId: updated.id,
+          type: NotificationType.REPORT_UPDATED,
+          message: `Your report "${updated.title}" is now ${updated.status.replace("_", " ").toLowerCase()}.`,
+        },
+      });
+      return updated;
     });
     return NextResponse.json({ report });
   } catch (error) {

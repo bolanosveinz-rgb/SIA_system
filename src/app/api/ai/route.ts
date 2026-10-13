@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { routeError, validationError } from "@/lib/http";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const questionSchema = z.object({ question: z.string().trim().min(3).max(1000) });
 
 export async function POST(request: NextRequest) {
+  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`assistant:${client}`, 12, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "You’ve asked a lot of questions recently. Please try again later." }, { status: 429 });
+  }
   try {
     const parsed = questionSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);

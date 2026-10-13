@@ -16,9 +16,17 @@ export async function GET(request: NextRequest) {
     }
     const from = query.get("from");
     const to = query.get("to");
-    const createdAt = from || to ? {
-      ...(from && Number.isFinite(Date.parse(from)) ? { gte: new Date(from) } : {}),
-      ...(to && Number.isFinite(Date.parse(to)) ? { lte: new Date(`${to}T23:59:59.999`) } : {}),
+    const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
+    const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
+    if ((fromDate && !Number.isFinite(fromDate.getTime())) || (toDate && !Number.isFinite(toDate.getTime()))) {
+      return NextResponse.json({ error: "Choose valid date filters." }, { status: 400 });
+    }
+    if (fromDate && toDate && fromDate > toDate) {
+      return NextResponse.json({ error: "The start date must be on or before the end date." }, { status: 400 });
+    }
+    const createdAt = fromDate || toDate ? {
+      ...(fromDate ? { gte: fromDate } : {}),
+      ...(toDate ? { lte: toDate } : {}),
     } : undefined;
     const where = user.role === Role.ADMIN
       ? {
@@ -52,24 +60,27 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = reportSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
-    const report = await prisma.report.create({
-      data: {
-        ...parsed.data,
-        residentId: user.id,
-        status: ReportStatus.PENDING,
-      },
-    });
     const admins = await prisma.user.findMany({ where: { role: Role.ADMIN }, select: { id: true } });
-    if (admins.length > 0) {
-      await prisma.notification.createMany({
-        data: admins.map((admin) => ({
-          userId: admin.id,
-          reportId: report.id,
-          type: NotificationType.NEW_REPORT,
-          message: `${user.name} submitted a new report: ${report.title}`,
-        })),
+    const report = await prisma.$transaction(async (transaction) => {
+      const created = await transaction.report.create({
+        data: {
+          ...parsed.data,
+          residentId: user.id,
+          status: ReportStatus.PENDING,
+        },
       });
-    }
+      if (admins.length > 0) {
+        await transaction.notification.createMany({
+          data: admins.map((admin) => ({
+            userId: admin.id,
+            reportId: created.id,
+            type: NotificationType.NEW_REPORT,
+            message: `${user.name} submitted a new report: ${created.title}`,
+          })),
+        });
+      }
+      return created;
+    });
     return NextResponse.json({ report }, { status: 201 });
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });

@@ -22,7 +22,10 @@ export const reportSchema = z.object({
   lng: z.number().min(124.77).max(125.12),
   address: z.string().trim().max(300).default(""),
   barangay: z.string().trim().max(100).default(""),
-  photoUrl: z.string().url().max(2048).optional().nullable(),
+  photoUrl: z.string().url().max(2048).refine((value) => {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.hostname === "res.cloudinary.com";
+  }, "Report photos must be stored securely.").optional().nullable(),
   photoPublicId: z.string().max(255).optional().nullable(),
 }).refine((value) => isInsideTupi(value.lat, value.lng), {
   message: "Select a location within Tupi.",
@@ -32,7 +35,10 @@ export const reportSchema = z.object({
 export const newsSchema = z.object({
   caption: z.string().trim().min(3, "Write a caption for this update.").max(10000),
   media: z.array(z.object({
-    url: z.string().url().max(2048),
+    url: z.string().url().max(2048).refine((value) => {
+      const parsed = new URL(value);
+      return parsed.protocol === "https:" && parsed.hostname === "res.cloudinary.com";
+    }, "News media must be stored securely."),
     publicId: z.string().min(1).max(255),
     type: z.enum(["IMAGE", "VIDEO"]),
   })).max(5).default([]),

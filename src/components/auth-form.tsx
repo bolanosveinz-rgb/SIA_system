@@ -36,7 +36,7 @@ export function AuthForm({ mode }: Props) {
       address: values.address,
       password: values.password,
     } : {
-      identifier: values.identifier,
+      identifier: isAdmin ? values.email : values.identifier,
       password: values.password,
     };
     try {

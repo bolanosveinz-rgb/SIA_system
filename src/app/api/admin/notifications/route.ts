@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH() {
   const { user, response } = await requireUser(Role.ADMIN);
   if (!user) return response;
   try {

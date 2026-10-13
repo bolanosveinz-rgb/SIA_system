@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ReportStatus, MediaType } from "@prisma/client";
+import { PrismaClient, Role, ReportStatus } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -12,7 +12,18 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email },
-    update: {},
+    update: {
+      adminProfile: {
+        upsert: {
+          create: {
+            officeName: "Municipality of Tupi",
+            contact: process.env.ADMIN_PHONE ?? "",
+            address: "Tupi, South Cotabato",
+          },
+          update: {},
+        },
+      },
+    },
     create: {
       name: process.env.ADMIN_NAME ?? "ServeLink Administrator",
       email,
@@ -28,7 +39,8 @@ async function main() {
     },
   });
 
-  const resident = await prisma.user.upsert({
+  if (process.env.NODE_ENV !== "production") {
+    const resident = await prisma.user.upsert({
     where: { email: "resident@example.com" },
     update: {},
     create: {
@@ -43,37 +55,31 @@ async function main() {
         },
       },
     },
-  });
+    });
 
-  if ((await prisma.news.count()) === 0) {
-    await prisma.news.create({
-      data: {
-        caption: "Welcome to ServeLink. Follow this page for the latest municipal updates, services, and community announcements.",
-        authorId: admin.id,
-        media: {
-          create: {
-            url: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
-            publicId: "servelink/sample-community",
-            type: MediaType.IMAGE,
-          },
+    if ((await prisma.news.count()) === 0) {
+      await prisma.news.create({
+        data: {
+          caption: "Welcome to ServeLink. Follow this page for the latest municipal updates, services, and community announcements.",
+          authorId: admin.id,
         },
-      },
-    });
-  }
+      });
+    }
 
-  if ((await prisma.report.count()) === 0) {
-    await prisma.report.create({
-      data: {
-        title: "Sample road maintenance request",
-        description: "This sample report demonstrates how community concerns appear on the Tupi map.",
-        lat: 6.3333,
-        lng: 124.95,
-        address: "Poblacion, Tupi, South Cotabato",
-        barangay: "Poblacion",
-        status: ReportStatus.PENDING,
-        residentId: resident.id,
-      },
-    });
+    if ((await prisma.report.count()) === 0) {
+      await prisma.report.create({
+        data: {
+          title: "Sample road maintenance request",
+          description: "This sample report demonstrates how community concerns appear on the Tupi map.",
+          lat: 6.3333,
+          lng: 124.95,
+          address: "Poblacion, Tupi, South Cotabato",
+          barangay: "Poblacion",
+          status: ReportStatus.PENDING,
+          residentId: resident.id,
+        },
+      });
+    }
   }
 }
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isInsideTupi } from "@/lib/places";
 
 export async function GET(request: NextRequest) {
   const lat = Number(request.nextUrl.searchParams.get("lat"));
   const lng = Number(request.nextUrl.searchParams.get("lng"));
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < 6.19 || lat > 6.49 || lng < 124.77 || lng > 125.12) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !isInsideTupi(lat, lng)) {
     return NextResponse.json({ error: "Choose a location within the Tupi map area." }, { status: 400 });
   }
   const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

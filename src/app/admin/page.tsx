@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Activity, ArrowRight, CheckCircle2, Clock3, FileText, Users } from "lucide-react";
 import { toast } from "sonner";
-import { CommunityMap } from "@/components/community-map";
 import { Card, StatusBadge } from "@/components/ui";
+
+const CommunityMap = dynamic(() => import("@/components/community-map").then((module) => module.CommunityMap), {
+  ssr: false,
+  loading: () => <div className="h-[450px] animate-pulse rounded-2xl bg-[var(--line)]" />,
+});
 
 type Report = { id: string; title: string; status: string; createdAt: string; lat: number; lng: number; resident: { name: string } };
 type Dashboard = { stats: { residents: number; reports: number; pending: number; resolved: number }; recentReports: Report[] };
