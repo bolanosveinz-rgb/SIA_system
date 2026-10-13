@@ -49,14 +49,16 @@ model User {
 }
 
 model ResidentProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  phone     String   @unique
-  barangay  String
-  address   String   @db.VarChar(300)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  phone                String   @unique
+  barangay             String
+  address              String   @db.VarChar(300)
+  profilePhotoUrl      String?  @db.VarChar(2048)
+  profilePhotoPublicId String?  @db.VarChar(255)
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([barangay])
 }
