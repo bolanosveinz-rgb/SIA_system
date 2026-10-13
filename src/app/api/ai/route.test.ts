@@ -145,3 +145,27 @@ test("turns Gemini invalid-key errors into a safe and actionable response", asyn
     else process.env.GEMINI_API_MODEL = oldModel;
   }
 });
+
+test("explains Gemini quota exhaustion and preserves a valid retry interval", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      error: { code: 429, status: "RESOURCE_EXHAUSTED" },
+    }), { status: 429, headers: { "retry-after": "60" } });
+    const response = await POST(request("198.51.100.106"));
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.match(body.error, /quota/);
+    assert.equal(response.headers.get("retry-after"), "60");
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});

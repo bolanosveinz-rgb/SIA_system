@@ -2,6 +2,7 @@ import { compare, hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { isSameOrigin, requireUser, setSessionCookie } from "@/lib/auth";
+import { databaseErrorResponse } from "@/lib/database-errors";
 import { routeError, validationError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { deleteCloudinaryAsset } from "@/lib/cloudinary";
@@ -44,7 +45,7 @@ export async function GET() {
     await setSessionCookie(response, { id: user.id, name: profile?.name ?? user.name, email: profile?.email ?? user.email, role: Role.ADMIN });
     return response;
   } catch (error) {
-    return routeError(error);
+    return databaseErrorResponse(error, "Admin settings read") ?? routeError(error);
   }
 }
 
@@ -101,7 +102,7 @@ export async function PUT(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
-    return routeError(error);
+    return databaseErrorResponse(error, "Admin settings update") ?? routeError(error);
   }
 }
 
@@ -120,6 +121,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
-    return routeError(error);
+    return databaseErrorResponse(error, "Admin password update") ?? routeError(error);
   }
 }

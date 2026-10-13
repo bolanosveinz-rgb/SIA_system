@@ -71,10 +71,11 @@ export async function POST(request: NextRequest) {
         );
       }
       if (response.status === 429 || providerStatus === "RESOURCE_EXHAUSTED") {
-        return NextResponse.json(
-          { error: "The Gemini assistant is temporarily rate-limited or out of quota. Check your Google AI Studio quota and try again shortly." },
-          { status: 503 },
-        );
+        const retryAfter = response.headers.get("retry-after");
+        const headers = retryAfter && /^\d+$/.test(retryAfter) ? { "Retry-After": retryAfter } : undefined;
+        return NextResponse.json({
+          error: "Google Gemini has reached this key's request-rate or usage quota. Wait for the quota to reset, or check the key's Google AI Studio project, billing, and model limits.",
+        }, { status: 503, headers });
       }
       return NextResponse.json({ error: "The assistant is temporarily unavailable. Please try again shortly." }, { status: 502 });
     }
