@@ -6,7 +6,7 @@ ServeLink is a community reporting and information platform connecting residents
 
 - Resident registration and email/phone sign-in; invite-only administrator sign-in.
 - HTTP-only signed JWT session cookies, bcrypt password hashes, Zod validation, role checks on API routes, same-origin mutation checks, and per-process authentication/API rate limits.
-- Resident home page with a ServeLink Search, official news feed, optimistic likes, newest-first comments, and dark/light theme.
+- Resident home page with a Gemini-powered community chatbot, official news feed, optimistic likes, newest-first comments, and dark/light theme.
 - Interactive Tupi boundary map, report pins, report-density heat layer, reverse geocoding, signed Cloudinary uploads, and resident report/status tracking.
 - LGU dashboard, live report notifications using database-backed notification records and short polling, reports with filters/status/remarks, resident directory, news moderation/CRUD, and editable administrator profile/password.
 - MySQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
