@@ -11,6 +11,26 @@ ServeLink is a community reporting and information platform connecting residents
 - LGU dashboard, live report notifications using database-backed notification records and short polling, reports with filters/status/remarks, resident directory, news moderation/CRUD, and editable administrator profile/password.
 - MySQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
 
+## Project structure
+
+```text
+prisma/
+  migrations/                 MySQL migration history
+  schema.prisma               Data models, relations, roles and indexes
+  seed.ts                     Admin account and local demo data
+src/
+  app/
+    admin/                    Protected LGU dashboard and workspace
+    api/                      Next.js Route Handlers
+    login/ register/          Resident authentication pages
+    map/ my-reports/          Community map and resident report status
+  components/                 Responsive UI, auth, news feed and Leaflet map
+  data/tupi-boundary.json     OpenStreetMap municipal GeoJSON
+  lib/                        Auth, validation, Prisma, uploads and domain helpers
+render.yaml                   Render blueprint
+.env.example                  Required environment-variable template
+```
+
 ## Requirements
 
 - Node.js 22 LTS and npm.
