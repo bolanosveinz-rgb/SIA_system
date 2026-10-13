@@ -3,15 +3,11 @@ export const BARANGAYS = [
   "Bololmala",
   "Bunao",
   "Cabulan",
-  "Cablon",
-  " Cebuano",
+  "Cebuano",
   "Crossing Rubber",
   "Kablon",
   "Kalkam",
-  "Kibao",
   "Linan",
-  "Linan 2",
-  "Linan 3",
   "Lunen",
   "Miasong",
   "Palian",
@@ -19,8 +15,7 @@ export const BARANGAYS = [
   "Polonuling",
   "Simbo",
   "Tubeng",
-  "Tupi",
-].map((name) => name.trim());
+];
 
 export const TUPI_CENTER: [number, number] = [6.3333, 124.95];
 export const TUPI_BOUNDS: [[number, number], [number, number]] = [
