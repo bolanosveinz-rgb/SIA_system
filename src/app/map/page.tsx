@@ -67,6 +67,7 @@ export default function MapPage() {
       setSelected({ lat, lng, address: data.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`, barangay: detected });
     } catch {
       if (requestId === geocodeRequest.current) {
+        toast.info("Address lookup is unavailable right now. Your coordinates are still selected.");
         setSelected({ lat, lng, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}, Tupi, South Cotabato`, barangay: residentBarangay });
       }
     } finally {

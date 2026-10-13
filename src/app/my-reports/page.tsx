@@ -15,16 +15,46 @@ export default function MyReportsPage() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
-    fetch("/api/reports").then(async (response) => {
-      if (response.status === 401) { setSignedIn(false); return; }
-      if (!response.ok) throw new Error("Your reports could not be loaded.");
-      setSignedIn(true);
-      setReports((await response.json()).reports);
-    }).catch((cause) => {
-      setError(cause instanceof Error ? cause.message : "Your reports could not be loaded.");
-      setSignedIn(true);
-      toast.error(cause instanceof Error ? cause.message : "Your reports could not be loaded.");
-    }).finally(() => setLoading(false));
+    let active = true;
+    let initialized = false;
+    let priorStatuses = new Map<string, string>();
+    const load = async () => {
+      try {
+        const response = await fetch("/api/reports");
+        if (!active) return;
+        if (response.status === 401) {
+          setSignedIn(false);
+          return;
+        }
+        if (!response.ok) throw new Error("Your reports could not be loaded.");
+        const result = await response.json() as { reports: Report[] };
+        if (!active) return;
+        if (initialized) {
+          for (const report of result.reports) {
+            const previous = priorStatuses.get(report.id);
+            if (previous && previous !== report.status) {
+              toast.info(`“${report.title}” is now ${report.status.replace("_", " ").toLowerCase()}.`);
+            }
+          }
+        }
+        priorStatuses = new Map(result.reports.map((report) => [report.id, report.status]));
+        initialized = true;
+        setError("");
+        setSignedIn(true);
+        setReports(result.reports);
+      } catch (cause) {
+        if (!active) return;
+        const message = cause instanceof Error ? cause.message : "Your reports could not be loaded.";
+        setError(message);
+        setSignedIn(true);
+        if (!initialized) toast.error(message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 20000);
+    return () => { active = false; window.clearInterval(timer); };
   }, []);
 
   return <><SiteHeader /><main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">

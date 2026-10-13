@@ -48,6 +48,7 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
           <button onClick={toggleTheme} className="ml-1 flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--background)]" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
         </nav>
         <div className="flex items-center gap-1 md:hidden">
+          {heatLink && <Link href="/map" aria-label="Open Tupi heat map" className="flex h-10 w-10 items-center justify-center rounded-xl text-[#0d9b91]"><MapPinned size={19} /></Link>}
           <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)]" aria-label="Toggle theme">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
           <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--foreground)]" aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
         </div>
