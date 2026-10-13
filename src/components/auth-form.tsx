@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Eye, EyeOff, Landmark, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { BARANGAYS } from "@/lib/places";
 import { Button, Input } from "@/components/ui";
+import { BrandLogo } from "@/components/brand-logo";
 
 type Props = { mode: "register" | "resident-login" | "admin-login" };
 
@@ -60,9 +61,7 @@ export function AuthForm({ mode }: Props) {
   return (
     <div className="mx-auto w-full max-w-[460px]">
       <div className="mb-7 text-center">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#12365a] text-white shadow-lg shadow-blue-950/15 dark:bg-[#a8d1ff] dark:text-[#10253b]">
-          {isAdmin ? <Landmark size={25} /> : <span className="text-2xl font-extrabold">S</span>}
-        </div>
+        <BrandLogo className="mx-auto mb-5 h-14 w-14 rounded-2xl object-contain" />
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{isRegister ? "Join your community" : isAdmin ? "LGU sign in" : "Welcome back"}</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">{isRegister ? "Create an account to connect with your local government." : isAdmin ? "Secure access for authorized LGU administrators." : "Sign in to stay connected with Tupi."}</p>
       </div>

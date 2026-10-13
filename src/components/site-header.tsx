@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MapPinned, Menu, Moon, Sun, X } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 type User = {
   name: string;
@@ -45,9 +46,7 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--surface)]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5" aria-label="ServeLink home">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#12365a] text-white shadow-md shadow-blue-950/15 dark:bg-[#a8d1ff] dark:text-[#10253b]">
-            <span className="text-xl font-bold">S</span>
-          </span>
+          <BrandLogo className="h-10 w-10 shrink-0 rounded-xl object-contain" />
           <span><span className="block text-base font-extrabold tracking-tight">Serve<span className="text-[#0d9b91]">Link</span></span><span className="block text-[10px] font-medium tracking-[.12em] text-[var(--muted)] uppercase">Tupi, South Cotabato</span></span>
         </Link>
         <nav className="hidden items-center gap-2 md:flex">
