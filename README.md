@@ -102,7 +102,7 @@ render.yaml                   Render blueprint
 
 ## Google Gemini assistant
 
-Create a Gemini API key in Google AI Studio, set `GEMINI_API_KEY` in `.env` or your hosting provider, and set `GEMINI_API_MODEL` to a Gemini model enabled for that key (the default is `gemini-2.5-flash`). A Claude model identifier is not a Gemini model. Requests go through `POST /api/ai`; the key is sent server-to-server in the `x-goog-api-key` header and is never exposed to the browser. The endpoint has a basic per-IP request limit and reports invalid credentials, unavailable models, and quota errors explicitly.
+Create a Gemini API key in Google AI Studio and make sure Gemini API access is enabled for it. Set `GEMINI_API_KEY` in your local `.env` or hosting-provider environment; `.env.example` intentionally leaves it blank. If Google rejects the key, replace it with a valid AI Studio key and check that its API restrictions allow Gemini API requests. For hosted deployments, update the variable in the provider dashboard and restart or redeploy the app so the new value is loaded. Set `GEMINI_API_MODEL` to a Gemini model enabled for that key (the default is `gemini-2.5-flash`); a Claude model identifier is not a Gemini model. Requests go through `POST /api/ai`; the key is sent server-to-server in the `x-goog-api-key` header and is never exposed to the browser. The endpoint has a basic per-IP request limit and reports invalid credentials, unavailable models, and quota errors explicitly.
 
 ## GitHub and branch workflow
 
