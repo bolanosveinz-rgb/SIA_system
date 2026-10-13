@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RESIDENT
+  ADMIN
+}
+
+enum ReportStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum NotificationType {
+  NEW_REPORT
+  REPORT_UPDATED
+  ANNOUNCEMENT
+}
+
+model User {
+  id             String           @id @default(cuid())
+  name           String
+  email          String           @unique
+  passwordHash   String
+  role           Role             @default(RESIDENT)
+  residentProfile ResidentProfile?
+  adminProfile   AdminProfile?
+  news           News[]
+  likes          Like[]
+  comments       Comment[]
+  reports        Report[]
+  notifications  Notification[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([role, createdAt])
+}
+
+model ResidentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  phone     String
+  barangay  String
+  address   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([barangay])
+}
+
+model AdminProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  officeName  String   @default("Municipality of Tupi")
+  contact     String   @default("")
+  address     String   @default("")
+  logoUrl     String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model News {
+  id          String      @id @default(cuid())
+  caption     String      @db.Text
+  published   Boolean     @default(true)
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  media       NewsMedia[]
+  likes       Like[]
+  comments    Comment[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([published, createdAt])
+}
+
+model NewsMedia {
+  id        String    @id @default(cuid())
+  newsId    String
+  url       String
+  publicId  String
+  type      MediaType
+  news      News      @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([newsId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  newsId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  news      News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, newsId])
+  @@index([newsId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String   @db.VarChar(2000)
+  userId    String
+  newsId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  news      News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([newsId, createdAt])
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  lat         Float
+  lng         Float
+  address     String       @default("")
+  barangay    String       @default("")
+  status      ReportStatus @default(PENDING)
+  photoUrl    String?
+  photoPublicId String?
+  remarks     String?      @db.Text
+  residentId  String
+  resident    User         @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  notifications Notification[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([barangay, createdAt])
+  @@index([residentId, createdAt])
+  @@index([lat, lng])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  reportId  String?
+  type      NotificationType
+  message   String
+  readAt    DateTime?
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report    Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([reportId])
+}
