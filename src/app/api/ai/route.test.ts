@@ -374,15 +374,68 @@ test("explains when neither configured nor alternate Gemini model is available",
     delete process.env.GEMINI_API_MODEL;
     globalThis.fetch = async (input) => {
       requestedModels.push(String(input));
+      if (String(input).includes("/v1beta/models?")) {
+        return Response.json({ models: [] });
+      }
       return new Response(JSON.stringify({ error: { status: "NOT_FOUND" } }), { status: 404 });
     };
 
     const response = await POST(request("198.51.100.110"));
     const body = await response.json();
     assert.equal(response.status, 502);
-    assert.match(body.error, /could not find model "gemini-2.5-flash"/);
-    assert.match(body.error, /also tried "gemini-2.5-flash-lite"/);
-    assert.equal(requestedModels.length, 2);
+    assert.match(body.error, /could not find an available text model/);
+    assert.equal(requestedModels.length, 3);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("discovers a generateContent model available to the Gemini key", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  const requestedModels: string[] = [];
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
+    delete process.env.GEMINI_API_MODEL;
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.includes("/v1beta/models?")) {
+        assert.equal(new Headers(init?.headers).get("x-goog-api-key"), "server-only-test-key");
+        assert.doesNotMatch(url, /server-only-test-key/);
+        return Response.json({
+          models: [
+            { name: "models/gemini-2.0-flash-001", supportedGenerationMethods: ["generateContent"] },
+            { name: "models/gemini-3.0-flash-preview", supportedGenerationMethods: ["generateContent"] },
+            { name: "models/gemini-9.0-embedding", supportedGenerationMethods: ["embedContent"] },
+            { name: "models/text-embedding-latest", supportedGenerationMethods: ["generateContent"] },
+          ],
+        });
+      }
+
+      requestedModels.push(url);
+      if (requestedModels.length <= 2) {
+        return new Response(JSON.stringify({ error: { status: "NOT_FOUND" } }), { status: 404 });
+      }
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Answered by an available model." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.111"));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.answer, "Answered by an available model.");
+    assert.equal(requestedModels.length, 3);
+    assert.match(requestedModels[2], /models\/gemini-3\.0-flash-preview:generateContent$/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;

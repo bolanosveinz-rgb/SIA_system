@@ -20,6 +20,73 @@ function isQuotaLimited(response: Response) {
   return response.status === 429;
 }
 
+async function discoverGeminiModels(apiKey: string) {
+  const models: string[] = [];
+  let pageToken: string | undefined;
+
+  for (let page = 0; page < 5; page += 1) {
+    const url = new URL("https://generativelanguage.googleapis.com/v1beta/models");
+    url.searchParams.set("pageSize", "100");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        headers: { "x-goog-api-key": apiKey },
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (error) {
+      console.warn("Gemini model discovery request failed.", {
+        error: error instanceof Error ? error.name : "Unknown error",
+      });
+      return { models, authorizationFailed: false };
+    }
+
+    if (!response.ok) {
+      console.warn("Gemini model discovery returned an error.", { status: response.status });
+      return { models, authorizationFailed: response.status === 401 || response.status === 403 };
+    }
+
+    let result: {
+      models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
+      nextPageToken?: string;
+    };
+    try {
+      result = await response.json();
+    } catch {
+      console.warn("Gemini model discovery returned invalid JSON.");
+      return { models, authorizationFailed: false };
+    }
+    for (const model of result.models ?? []) {
+      const name = model.name?.replace(/^models\//, "");
+      if (
+        name?.startsWith("gemini-") &&
+        !/(embedding|image|tts|audio|robotics|computer-use)/i.test(name) &&
+        model.supportedGenerationMethods?.includes("generateContent")
+      ) {
+        models.push(name);
+      }
+    }
+    pageToken = result.nextPageToken;
+    if (!pageToken) break;
+  }
+
+  models.sort((left, right) => {
+    const leftFlash = left.includes("flash") ? 1 : 0;
+    const rightFlash = right.includes("flash") ? 1 : 0;
+    if (leftFlash !== rightFlash) return rightFlash - leftFlash;
+    const leftVersion = left.match(/^gemini-(\d+)(?:\.(\d+))?/);
+    const rightVersion = right.match(/^gemini-(\d+)(?:\.(\d+))?/);
+    const versionDifference =
+      Number(rightVersion?.[1] ?? 0) - Number(leftVersion?.[1] ?? 0) ||
+      Number(rightVersion?.[2] ?? 0) - Number(leftVersion?.[2] ?? 0);
+    if (versionDifference) return versionDifference;
+    return left.localeCompare(right);
+  });
+
+  return { models: [...new Set(models)], authorizationFailed: false };
+}
+
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
   const client = getClientAddress(request.headers);
@@ -69,11 +136,30 @@ export async function POST(request: NextRequest) {
     let responseModel = model;
     const isModelUnavailable = (candidate: Response) => candidate.status === 404;
     const alternateModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+    const attemptedModels = new Set([model]);
     if (isQuotaLimited(response) || isModelUnavailable(response)) {
       const reason = isQuotaLimited(response) ? "quota reached" : "model unavailable";
       responseModel = alternateModel;
+      attemptedModels.add(responseModel);
       console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
       response = await requestGemini(responseModel);
+    }
+    if (isModelUnavailable(response)) {
+      const discovered = await discoverGeminiModels(apiKey);
+      if (discovered.authorizationFailed) {
+        return NextResponse.json(
+          { error: "Google Gemini rejected this API key while checking available models. Verify GEMINI_API_KEY and enable Gemini API access for the key." },
+          { status: 502 },
+        );
+      }
+      for (const availableModel of discovered.models.slice(0, 5)) {
+        if (attemptedModels.has(availableModel)) continue;
+        attemptedModels.add(availableModel);
+        console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
+        responseModel = availableModel;
+        response = await requestGemini(responseModel);
+        if (!isModelUnavailable(response)) break;
+      }
     }
     if (!response.ok) {
       const requestId = response.headers.get("x-guploader-uploadid");
@@ -94,7 +180,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status === 404 || providerStatus === "NOT_FOUND") {
         return NextResponse.json(
-          { error: `Google Gemini could not find model "${responseModel}". The app also tried "${model === responseModel ? alternateModel : model}". Set GEMINI_CHAT_MODEL to a text model available to your API key, then restart or redeploy the app.` },
+          { error: "Google Gemini could not find an available text model for this API key. The assistant tried the configured model, its fallback, and models listed as supporting generateContent. Check that this key has Gemini API access, then set GEMINI_CHAT_MODEL to one of its available models." },
           { status: 502 },
         );
       }
