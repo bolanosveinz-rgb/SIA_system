@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { routeError, validationError } from "@/lib/http";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 
 const questionSchema = z.object({ question: z.string().trim().min(3).max(1000) });
 
 export async function POST(request: NextRequest) {
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const client = getClientAddress(request.headers);
   if (!checkRateLimit(`assistant:${client}`, 12, 60 * 60 * 1000)) {
     return NextResponse.json({ error: "You’ve asked a lot of questions recently. Please try again later." }, { status: 429 });
   }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: process.env.AI_MODEL ?? "claude-3-5-sonnet-latest",
+        model: process.env.AI_MODEL ?? "claude-sonnet-4-20250514",
         max_tokens: 700,
         system: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
         messages: [{ role: "user", content: parsed.data.question }],

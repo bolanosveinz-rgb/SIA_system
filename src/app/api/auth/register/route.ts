@@ -4,13 +4,13 @@ import { Role } from "@prisma/client";
 import { setSessionCookie } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 import { isSameOrigin } from "@/lib/auth";
 import { registerSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const client = getClientAddress(request.headers);
   if (!checkRateLimit(`register:${client}`, 5)) {
     return NextResponse.json({ error: "Too many sign-up attempts. Please try again in 15 minutes." }, { status: 429 });
   }

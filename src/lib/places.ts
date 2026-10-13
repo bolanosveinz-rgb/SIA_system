@@ -19,12 +19,13 @@ export const BARANGAYS = [
 
 export const TUPI_CENTER: [number, number] = [6.3333, 124.95];
 import boundary from "@/data/tupi-boundary.json";
+import type { Feature, Polygon } from "geojson";
 
 export const TUPI_BOUNDS: [[number, number], [number, number]] = [
   [6.2382124, 124.8680091],
   [6.4610003, 125.1198653],
 ];
-export const TUPI_BOUNDARY = boundary;
+export const TUPI_BOUNDARY = boundary as Feature<Polygon>;
 
 export function isInsideTupi(lat: number, lng: number) {
   if (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 import { isInsideTupi } from "@/lib/places";
 
 export async function GET(request: NextRequest) {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || !isInsideTupi(lat, lng)) {
     return NextResponse.json({ error: "Choose a location within the Tupi map area." }, { status: 400 });
   }
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const client = getClientAddress(request.headers);
   if (!checkRateLimit(`geocode:${client}`, 1, 1000)) {
     return NextResponse.json({ error: "Please wait a moment before looking up another location." }, { status: 429 });
   }
