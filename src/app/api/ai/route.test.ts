@@ -3,15 +3,18 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/ai/route";
 
+type TestImage = { mimeType: string; data: string };
+
 function request(
   ip: string,
   question = "How can I report a local concern?",
-  history?: Array<{ role: "user" | "model"; text: string }>,
+  history?: Array<{ role: "user" | "model"; text: string; image?: TestImage }>,
+  image?: TestImage,
 ) {
   return new NextRequest("http://localhost:3000/api/ai", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ question, ...(history ? { history } : {}) }),
+    body: JSON.stringify({ question, ...(history ? { history } : {}), ...(image ? { image } : {}) }),
   });
 }
 
@@ -49,6 +52,39 @@ test("calls Google Gemini server-side with its API key in the header and returns
       parts: [{ text: "How can I report a local concern?" }],
     }]);
     assert.ok(captured.body.systemInstruction);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("does not enforce an application question-count limit", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  let requestCount = 0;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    delete process.env.GEMINI_API_MODEL;
+    globalThis.fetch = async () => {
+      requestCount += 1;
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Here is your answer." }] } }],
+      });
+    };
+
+    const responses = await Promise.all(
+      Array.from({ length: 15 }, (_, index) => POST(request(`198.51.100.${120 + index}`))),
+    );
+    assert.equal(requestCount, 15);
+    assert.ok(responses.every((response) => response.status === 200));
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -115,6 +151,94 @@ test("sends prior chat messages to Gemini as conversation context", async () => 
       { role: "model", parts: [{ text: "You can submit one from the community map." }] },
       { role: "user", parts: [{ text: "Where can I track it?" }] },
     ]);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
+test("sends attached image data to Gemini for multimodal analysis", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let sentContents: unknown;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { contents: unknown };
+      sentContents = body.contents;
+      return Response.json({ candidates: [{ content: { parts: [{ text: "This looks like a road concern." }] } }] });
+    };
+
+    const response = await POST(request("198.51.100.114", "", undefined, {
+      mimeType: "image/jpeg",
+      data: "aGVsbG8=",
+    }));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.answer, "This looks like a road concern.");
+    assert.deepEqual(sentContents, [{
+      role: "user",
+      parts: [
+        { text: "Please describe this image and help me understand how it relates to Tupi community services." },
+        { inlineData: { mimeType: "image/jpeg", data: "aGVsbG8=" } },
+      ],
+    }]);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
+test("rejects unsupported image types before calling Gemini", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let called = false;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async () => {
+      called = true;
+      return Response.json({});
+    };
+    const response = await POST(request("198.51.100.115", "Describe", undefined, {
+      mimeType: "image/gif",
+      data: "aGVsbG8=",
+    }));
+    assert.equal(response.status, 400);
+    assert.equal(called, false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
+test("returns photo-specific guidance when Gemini exceeds the request timeout", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async () => {
+      throw new DOMException("Request timed out", "TimeoutError");
+    };
+
+    const response = await POST(request("198.51.100.116"));
+    const body = await response.json();
+    assert.equal(response.status, 504);
+    assert.match(body.error, /within 35 seconds/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;

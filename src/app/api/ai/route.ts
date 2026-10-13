@@ -2,18 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
-import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 
+const imageSchema = z.object({
+  mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  data: z.string().min(4).max(5_600_000).regex(/^[A-Za-z0-9+/]+={0,2}$/).refine((data) => data.length % 4 === 0),
+});
 const messageSchema = z.object({
   role: z.enum(["user", "model"]),
   text: z.string().trim().min(1).max(1000),
+  image: imageSchema.optional(),
 });
 const historySchema = z.array(messageSchema).max(12)
   .refine((messages) => messages.every((message, index) => message.role === (index % 2 === 0 ? "user" : "model")))
-  .refine((messages) => messages.length === 0 || messages[messages.length - 1].role === "model");
+  .refine((messages) => messages.length === 0 || messages[messages.length - 1].role === "model")
+  .refine((messages) => messages.every((message) => message.role === "user" || !message.image))
+  .refine((messages) => messages.filter((message) => message.image).length <= 1);
 const questionSchema = z.object({
-  question: z.string().trim().min(1).max(1000),
+  question: z.string().trim().max(1000).default(""),
+  image: imageSchema.optional(),
   history: historySchema.optional(),
+}).refine((data) => data.question.length > 0 || Boolean(data.image), {
+  message: "Enter a message or attach an image.",
+  path: ["question"],
+}).refine((data) => Number(Boolean(data.image)) + (data.history ?? []).filter((message) => message.image).length <= 1, {
+  message: "Only one photo can be included in a chat request.",
+  path: ["image"],
 });
 
 function isQuotaLimited(response: Response) {
@@ -32,7 +45,7 @@ async function discoverGeminiModels(apiKey: string) {
   const models: string[] = [];
   let pageToken: string | undefined;
 
-  for (let page = 0; page < 5; page += 1) {
+  for (let page = 0; page < 2; page += 1) {
     const url = new URL("https://generativelanguage.googleapis.com/v1beta/models");
     url.searchParams.set("pageSize", "100");
     if (pageToken) url.searchParams.set("pageToken", pageToken);
@@ -41,7 +54,7 @@ async function discoverGeminiModels(apiKey: string) {
     try {
       response = await fetch(url, {
         headers: { "x-goog-api-key": apiKey },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(5000),
       });
     } catch (error) {
       console.warn("Gemini model discovery request failed.", {
@@ -97,10 +110,6 @@ async function discoverGeminiModels(apiKey: string) {
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const client = getClientAddress(request.headers);
-  if (!checkRateLimit(`assistant:${client}`, 12, 60 * 60 * 1000)) {
-    return NextResponse.json({ error: "You’ve asked a lot of questions recently. Please try again later." }, { status: 429 });
-  }
   try {
     const parsed = questionSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
@@ -126,10 +135,22 @@ export async function POST(request: NextRequest) {
         }],
       },
       contents: [
-        ...(parsed.data.history ?? []).map(({ role, text }) => ({ role, parts: [{ text }] })),
-        { role: "user", parts: [{ text: parsed.data.question }] },
+        ...(parsed.data.history ?? []).map(({ role, text, image }) => ({
+          role,
+          parts: [
+            { text },
+            ...(image ? [{ inlineData: image }] : []),
+          ],
+        })),
+        {
+          role: "user",
+          parts: [
+            { text: parsed.data.question || "Please describe this image and help me understand how it relates to Tupi community services." },
+            ...(parsed.data.image ? [{ inlineData: parsed.data.image }] : []),
+          ],
+        },
       ],
-      generationConfig: { maxOutputTokens: 700 },
+      generationConfig: { maxOutputTokens: 500 },
     });
     const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
       method: "POST",
@@ -138,7 +159,7 @@ export async function POST(request: NextRequest) {
         "x-goog-api-key": apiKey,
       },
       body: requestBody,
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(35000),
     });
     let response = await requestGemini(model);
     let responseModel = model;
@@ -159,7 +180,7 @@ export async function POST(request: NextRequest) {
           { status: 502 },
         );
       }
-      for (const availableModel of discovered.models.slice(0, 5)) {
+      for (const availableModel of discovered.models.slice(0, 2)) {
         if (attemptedModels.has(availableModel)) continue;
         attemptedModels.add(availableModel);
         console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
@@ -232,7 +253,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
     if (error instanceof Error && error.name === "TimeoutError") {
-      return NextResponse.json({ error: "The assistant took too long to respond. Please try again." }, { status: 504 });
+      return NextResponse.json(
+        { error: "Gemini did not finish within 35 seconds. Try a smaller photo or a shorter message, then send it again." },
+        { status: 504 },
+      );
     }
     return routeError(error);
   }
