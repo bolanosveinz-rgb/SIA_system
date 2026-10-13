@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Bot, Camera, ImagePlus, MessageCircle, RotateCcw, Send, Sparkles, UserRound, X } from "lucide-react";
+import { AudioLines, Bot, Brain, Camera, ImagePlus, MessageCircle, Mic, MicOff, Plus, RotateCcw, Send, Sparkles, UserRound, X } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 
 const suggestions = [
@@ -29,6 +29,23 @@ type GeminiMessage = {
   text: string;
   image?: Pick<ChatImage, "mimeType" | "data">;
 };
+
+type SpeechRecognitionResultEvent = {
+  resultIndex: number;
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const MAX_SOURCE_IMAGE_SIZE = 12 * 1024 * 1024;
 const MAX_COMPRESSED_IMAGE_SIZE = 4 * 1024 * 1024;
@@ -83,11 +100,16 @@ export function CommunityChatbot() {
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState("");
   const [selectedImage, setSelectedImage] = useState<ChatImage | null>(null);
-  const [failedMessage, setFailedMessage] = useState<{ prompt: string; image: ChatImage | null } | null>(null);
+  const [failedMessage, setFailedMessage] = useState<{ prompt: string; image: ChatImage | null; thinkingMode: boolean } | null>(null);
+  const [thinkingMode, setThinkingMode] = useState(false);
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
   const [loading, setLoading] = useState(false);
   const conversationRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     const conversation = conversationRef.current;
@@ -109,6 +131,7 @@ export function CommunityChatbot() {
     suggestion?: string,
     retrying = false,
     retryImage: ChatImage | null = null,
+    retryThinkingMode = thinkingMode,
   ) {
     event?.preventDefault();
     const typedPrompt = (suggestion ?? question).trim();
@@ -121,6 +144,7 @@ export function CommunityChatbot() {
     setFailedMessage(null);
     if (!retrying) {
       setSelectedImage(null);
+      setAttachmentMenuOpen(false);
       setMessages((current) => [...current, { role: "user", text: prompt, imagePreview: attachment?.preview }]);
     }
     setLoading(true);
@@ -134,6 +158,7 @@ export function CommunityChatbot() {
             ? history.map(({ role, text }) => ({ role, text }))
             : history,
           ...(attachment ? { image: { mimeType: attachment.mimeType, data: attachment.data } } : {}),
+          thinkingMode: retrying ? retryThinkingMode : thinkingMode,
         }),
       });
       const data = await response.json() as { answer?: unknown; error?: unknown };
@@ -158,11 +183,56 @@ export function CommunityChatbot() {
       setFailedMessage(null);
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "The assistant could not respond. Please try again.");
-      setFailedMessage({ prompt, image: attachment });
+      setFailedMessage({ prompt, image: attachment, thinkingMode: retrying ? retryThinkingMode : thinkingMode });
     } finally {
       setLoading(false);
     }
   }
+
+  function toggleVoiceInput() {
+    if (recording) {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+    const speechWindow = window as Window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setVoiceError("Voice input is not supported in this browser. Try Chrome or Edge, or type your message.");
+      return;
+    }
+
+    setVoiceError("");
+    const recognition = new Recognition();
+    recognition.lang = "en-PH";
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.resultIndex]?.[0]?.transcript?.trim();
+      if (transcript) setQuestion((current) => `${current}${current.trim() ? " " : ""}${transcript}`);
+    };
+    recognition.onerror = (event) => {
+      setVoiceError(event.error === "not-allowed"
+        ? "Microphone access was denied. Allow microphone access in your browser settings and try again."
+        : "Voice input could not start. Check your microphone and try again.");
+    };
+    recognition.onend = () => {
+      setRecording(false);
+      speechRecognitionRef.current = null;
+    };
+    speechRecognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setRecording(true);
+    } catch {
+      speechRecognitionRef.current = null;
+      setRecording(false);
+      setVoiceError("Voice input could not start. Check your microphone and try again.");
+    }
+  }
+
+  useEffect(() => () => speechRecognitionRef.current?.stop(), []);
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -179,16 +249,21 @@ export function CommunityChatbot() {
     setImageError("");
     setSelectedImage(null);
     setFailedMessage(null);
+    setThinkingMode(false);
+    setVoiceError("");
   }
 
   return (
     <Card className="mx-auto mt-9 max-w-2xl overflow-hidden text-left shadow-[0_20px_70px_rgba(28,85,104,.13)]">
       <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={21} /></span>
+          <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0d9b91]/10 text-[#0d9b91]">
+            <span className="absolute inset-0 rounded-2xl bg-[#0d9b91]/15 motion-safe:animate-ping" />
+            <Bot size={21} className="relative motion-safe:animate-pulse" />
+          </span>
           <div>
             <h2 className="text-sm font-bold">Chat with ServeLink</h2>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Gemini community assistant</p>
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)]"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span> Gemini community assistant · Live</p>
           </div>
         </div>
         {history.length > 0 && (
@@ -201,7 +276,7 @@ export function CommunityChatbot() {
       <div ref={conversationRef} aria-label="Chat messages" aria-live="polite" className="max-h-[360px] min-h-48 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
         {messages.map((message, index) => (
           <div key={`${index}-${message.role}`} className={`flex items-end gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-            {message.role === "assistant" && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} /></span>}
+            {message.role === "assistant" && <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>}
             <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-br-md bg-[#12365a] text-white dark:bg-[#a8d1ff] dark:text-[#10253b]" : "rounded-bl-md bg-[var(--background)] text-[var(--foreground)]"}`}>
               {message.imagePreview && <img src={message.imagePreview} alt="Photo sent to ServeLink" className="mb-2 max-h-52 max-w-full rounded-xl object-contain" />}
               {message.text}
@@ -211,7 +286,7 @@ export function CommunityChatbot() {
         ))}
         {loading && (
           <div role="status" className="flex items-end gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} /></span>
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>
             <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-[var(--background)] px-4 py-3 text-sm text-[var(--muted)]">
               <span className="flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:240ms]" /></span>
               {selectedImage || messages[messages.length - 1]?.imagePreview ? "ServeLink is reviewing the photo…" : "ServeLink is typing"}
@@ -233,7 +308,7 @@ export function CommunityChatbot() {
       {error && (
         <div role="alert" className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:mx-5">
           <p>{error}</p>
-          {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image)} className="mt-1 font-semibold underline underline-offset-2">Retry this message</button>}
+          {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="mt-1 font-semibold underline underline-offset-2">Retry this message</button>}
         </div>
       )}
 
@@ -248,27 +323,37 @@ export function CommunityChatbot() {
         {imageError && <p role="alert" className="mb-2 text-xs text-rose-600">{imageError}</p>}
         <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={loading} onChange={(event) => { void selectImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
         <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" disabled={loading} onChange={(event) => { void selectImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-        <div className="flex items-end gap-2 rounded-2xl border border-[var(--line)] bg-[var(--background)] p-2 transition focus-within:border-[#0d9b91]/50 focus-within:ring-4 focus-within:ring-[#0d9b91]/10">
-          <button type="button" onClick={() => uploadInputRef.current?.click()} disabled={loading} aria-label="Upload an image" title="Upload an image" className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--muted)] transition hover:bg-[var(--surface)] hover:text-[#08776f] disabled:opacity-50"><ImagePlus size={18} /></button>
-          <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={loading} aria-label="Take a picture" title="Take a picture" className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--muted)] transition hover:bg-[var(--surface)] hover:text-[#08776f] disabled:opacity-50"><Camera size={18} /></button>
+        {voiceError && <p role="alert" className="mb-2 text-xs text-rose-600">{voiceError}</p>}
+        <div className="relative flex min-h-[58px] items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-[0_4px_20px_rgba(15,23,42,.06)] transition focus-within:border-[#0d9b91]/40 focus-within:shadow-[0_4px_24px_rgba(13,155,145,.12)] dark:border-[var(--line)] dark:bg-[var(--surface)]">
+          <button type="button" onClick={() => setAttachmentMenuOpen((open) => !open)} disabled={loading} aria-label="Add attachment" aria-expanded={attachmentMenuOpen} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--background)] disabled:opacity-50"><Plus size={23} /></button>
+          {attachmentMenuOpen && (
+            <div className="absolute bottom-full left-2 z-10 mb-2 w-48 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl">
+              <button type="button" onClick={() => { setAttachmentMenuOpen(false); uploadInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-[var(--background)]"><ImagePlus size={17} className="text-[#0d9b91]" /> Upload an image</button>
+              <button type="button" onClick={() => { setAttachmentMenuOpen(false); cameraInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-[var(--background)]"><Camera size={17} className="text-[#0d9b91]" /> Take a picture</button>
+            </div>
+          )}
           <Textarea
             aria-label="Message the ServeLink assistant"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a follow-up or start a conversation…"
-            className="min-h-11 max-h-32 resize-y border-0 bg-transparent px-2 py-2 text-sm shadow-none focus:border-0 focus:ring-0"
+            placeholder="Ask ServeLink"
+            className="min-h-10 max-h-28 min-w-0 resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none focus:border-0 focus:ring-0"
             maxLength={1000}
-            rows={2}
+            rows={1}
             disabled={loading}
           />
-          <Button type="submit" loading={loading} disabled={!question.trim() && !selectedImage} aria-label="Send message" className="mb-0.5 h-10 min-h-10 w-10 shrink-0 rounded-xl px-0">
-            {loading ? null : <Send size={17} />}
+          <button type="button" onClick={() => setThinkingMode((enabled) => !enabled)} aria-label="Toggle Think mode" aria-pressed={thinkingMode} title="Toggle Think mode" className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-2 text-sm transition sm:px-3 ${thinkingMode ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200" : "text-slate-500 hover:bg-[var(--background)]"}`}><Brain size={18} /><span className="hidden sm:inline">Think</span></button>
+          <button type="button" onClick={toggleVoiceInput} disabled={loading} aria-label={recording ? "Stop voice input" : "Start voice input"} title={recording ? "Stop voice input" : "Speak your message"} aria-pressed={recording} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-50 ${recording ? "bg-rose-50 text-rose-600 motion-safe:animate-pulse dark:bg-rose-950" : "text-[var(--foreground)] hover:bg-[var(--background)]"}`}>
+            {recording ? <MicOff size={19} /> : <Mic size={19} />}
+          </button>
+          <Button type="submit" loading={loading} disabled={!question.trim() && !selectedImage} aria-label="Send message" className="h-11 min-h-11 w-11 shrink-0 rounded-full bg-[#4f76e8] p-0 text-white hover:bg-[#3f64d5] dark:bg-[#4f76e8] dark:text-white">
+            {loading ? null : question.trim() || selectedImage ? <Send size={18} /> : <AudioLines size={21} />}
           </Button>
         </div>
         <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-[var(--muted)]">
-          <span className="inline-flex items-center gap-1"><Sparkles size={12} /> Photos are sent to Gemini for analysis. Confirm official or urgent information with the Municipality of Tupi.</span>
-          <span className="hidden sm:inline"><MessageCircle size={12} className="inline" /> Enter to send</span>
+          <span className="inline-flex items-center gap-1"><Sparkles size={12} /> Voice is transcribed by your browser; photos are sent to Gemini.</span>
+          <span className="hidden sm:inline"><MessageCircle size={12} className="inline" /> {recording ? "Listening…" : "Enter to send"}</span>
         </div>
       </form>
     </Card>

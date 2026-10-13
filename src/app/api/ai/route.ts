@@ -21,6 +21,7 @@ const questionSchema = z.object({
   question: z.string().trim().max(1000).default(""),
   image: imageSchema.optional(),
   history: historySchema.optional(),
+  thinkingMode: z.boolean().optional().default(false),
 }).refine((data) => data.question.length > 0 || Boolean(data.image), {
   message: "Enter a message or attach an image.",
   path: ["question"],
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     const requestBody = JSON.stringify({
       systemInstruction: {
         parts: [{
-          text: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
+          text: `You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.${parsed.data.thinkingMode ? " For this response, carefully consider the available context and give a well-checked, concise conclusion. Do not reveal private reasoning." : ""}`,
         }],
       },
       contents: [

@@ -197,6 +197,37 @@ test("sends attached image data to Gemini for multimodal analysis", async () => 
   }
 });
 
+test("enables careful response instructions when Think mode is selected", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let systemInstruction = "";
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { systemInstruction: { parts: Array<{ text: string }> } };
+      systemInstruction = body.systemInstruction.parts[0]?.text ?? "";
+      return Response.json({ candidates: [{ content: { parts: [{ text: "Carefully checked response." }] } }] });
+    };
+
+    const response = await POST(new NextRequest("http://localhost:3000/api/ai", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.117" },
+      body: JSON.stringify({ question: "What should I do?", thinkingMode: true }),
+    }));
+    assert.equal(response.status, 200);
+    assert.match(systemInstruction, /carefully consider the available context/);
+    assert.match(systemInstruction, /Do not reveal private reasoning/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
 test("rejects unsupported image types before calling Gemini", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
