@@ -20,6 +20,14 @@ function isQuotaLimited(response: Response) {
   return response.status === 429;
 }
 
+function isModelUnavailable(response: Response) {
+  return response.status === 404;
+}
+
+function isRetryableGeminiFailure(response: Response) {
+  return isQuotaLimited(response) || isModelUnavailable(response) || response.status >= 500;
+}
+
 async function discoverGeminiModels(apiKey: string) {
   const models: string[] = [];
   let pageToken: string | undefined;
@@ -134,17 +142,16 @@ export async function POST(request: NextRequest) {
     });
     let response = await requestGemini(model);
     let responseModel = model;
-    const isModelUnavailable = (candidate: Response) => candidate.status === 404;
     const alternateModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
     const attemptedModels = new Set([model]);
-    if (isQuotaLimited(response) || isModelUnavailable(response)) {
-      const reason = isQuotaLimited(response) ? "quota reached" : "model unavailable";
+    if (isRetryableGeminiFailure(response)) {
+      const reason = isQuotaLimited(response) ? "quota reached" : isModelUnavailable(response) ? "model unavailable" : "provider error";
       responseModel = alternateModel;
       attemptedModels.add(responseModel);
       console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
       response = await requestGemini(responseModel);
     }
-    if (isModelUnavailable(response)) {
+    if (isRetryableGeminiFailure(response)) {
       const discovered = await discoverGeminiModels(apiKey);
       if (discovered.authorizationFailed) {
         return NextResponse.json(
@@ -158,7 +165,7 @@ export async function POST(request: NextRequest) {
         console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
         responseModel = availableModel;
         response = await requestGemini(responseModel);
-        if (!isModelUnavailable(response)) break;
+        if (!isRetryableGeminiFailure(response)) break;
       }
     }
     if (!response.ok) {
@@ -191,7 +198,22 @@ export async function POST(request: NextRequest) {
           error: "Google Gemini has reached this key's request-rate or usage quota. Wait for the quota to reset, or check the key's Google AI Studio project, billing, and model limits.",
         }, { status: 503, headers });
       }
-      return NextResponse.json({ error: "The assistant is temporarily unavailable. Please try again shortly." }, { status: 502 });
+      if (response.status >= 500 || providerStatus === "INTERNAL" || providerStatus === "UNAVAILABLE") {
+        return NextResponse.json(
+          { error: "Google Gemini is temporarily unavailable on the models enabled for this key. The assistant tried alternate models; please try again shortly and check Google AI Studio service status if this continues." },
+          { status: 503 },
+        );
+      }
+      if (response.status === 400) {
+        return NextResponse.json(
+          { error: "Google Gemini rejected this chat request. Check that GEMINI_CHAT_MODEL supports text generation and try starting a new chat." },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json(
+        { error: `Google Gemini could not complete the request (HTTP ${response.status}). Check the Gemini API key, model access, and project status, then try again.` },
+        { status: 502 },
+      );
     }
     const result = (await response.json()) as {
       candidates?: Array<{

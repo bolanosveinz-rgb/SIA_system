@@ -446,3 +446,86 @@ test("discovers a generateContent model available to the Gemini key", async () =
     else process.env.GEMINI_API_MODEL = oldModel;
   }
 });
+
+test("discovers and retries available models after Gemini server errors", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  const requestedModels: string[] = [];
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    delete process.env.GEMINI_API_MODEL;
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes("/v1beta/models?")) {
+        return Response.json({
+          models: [
+            { name: "models/gemini-2.0-flash", supportedGenerationMethods: ["generateContent"] },
+            { name: "models/gemini-2.0-pro", supportedGenerationMethods: ["generateContent"] },
+          ],
+        });
+      }
+
+      requestedModels.push(url);
+      if (requestedModels.length <= 2) {
+        return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
+      }
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "The alternate model is responding." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.112"));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.answer, "The alternate model is responding.");
+    assert.equal(requestedModels.length, 3);
+    assert.match(requestedModels[0], /models\/gemini-2\.5-flash:generateContent$/);
+    assert.match(requestedModels[1], /models\/gemini-2\.5-flash-lite:generateContent$/);
+    assert.match(requestedModels[2], /models\/gemini-2\.0-flash:generateContent$/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("reports persistent Gemini server failures without a generic assistant error", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    delete process.env.GEMINI_API_MODEL;
+    globalThis.fetch = async (input) => {
+      if (String(input).includes("/v1beta/models?")) {
+        return Response.json({
+          models: [{ name: "models/gemini-2.0-flash", supportedGenerationMethods: ["generateContent"] }],
+        });
+      }
+      return new Response(JSON.stringify({ error: { status: "INTERNAL" } }), { status: 500 });
+    };
+
+    const response = await POST(request("198.51.100.113"));
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.match(body.error, /Google Gemini is temporarily unavailable/);
+    assert.doesNotMatch(body.error, /The assistant is temporarily unavailable/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
