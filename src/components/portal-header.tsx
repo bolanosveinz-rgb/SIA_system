@@ -23,7 +23,6 @@ type Props = {
   name: string;
   email: string;
   profilePhotoUrl?: string | null;
-  collapsed: boolean;
   mobileNavOpen?: boolean;
   onToggleSidebar: () => void;
 };
@@ -50,7 +49,7 @@ function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, collapsed, mobileNavOpen = false, onToggleSidebar }: Props) {
+export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, mobileNavOpen = false, onToggleSidebar }: Props) {
   const pathname = usePathname();
   const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
@@ -191,7 +190,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
               <div className="flex items-center gap-1">
                 {unread > 0 && <button type="button" onClick={() => void markAllRead()} disabled={markingRead} aria-label="Mark all notifications as read" title="Mark all as read" className="flex h-9 w-9 items-center justify-center rounded-lg text-[#0d9b91] hover:bg-[var(--accent-soft)] disabled:opacity-50"><CheckCheck size={17} /></button>}
                 <button type="button" onClick={() => setOpen(false)} aria-label="Close notifications" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] hover:bg-[var(--background)]"><X size={17} /></button>
-              </div>}
+              </div>
             </div>
             <div className="max-h-[min(28rem,65vh)] overflow-y-auto">
               {loading && !notifications.length ? <div className="space-y-3 p-4"><div className="h-3 w-2/3 animate-pulse rounded bg-[var(--line)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /></div>
@@ -201,7 +200,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
             </div>
             <Link href={reportUrl} onClick={() => setOpen(false)} className="block border-t border-[var(--line)] px-4 py-3 text-center text-xs font-bold text-[#0d9b91] transition hover:bg-[var(--background)]">{role === "ADMIN" ? "Go to reports" : "View my reports"}</Link>
           </section>}
-        </div>
+        </div>}
         <div className="ml-1 hidden min-w-0 items-center gap-2.5 border-l border-[var(--line)] pl-3 sm:flex">
           {profilePhotoUrl ? <img src={profilePhotoUrl} alt={`${name}'s profile`} className="h-9 w-9 rounded-full object-cover ring-2 ring-[var(--accent-soft)]" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[#08776f]">{name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span>}
           <span className="hidden max-w-36 min-w-0 md:block"><span className="block truncate text-xs font-bold">{name}</span><span className="block truncate text-[10px] text-[var(--muted)]">{email}</span></span>
