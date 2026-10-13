@@ -62,15 +62,17 @@ model ResidentProfile {
 }
 
 model AdminProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  officeName  String   @default("Municipality of Tupi")
-  contact     String   @default("")
-  address     String   @default("") @db.VarChar(300)
-  logoUrl     String?
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  officeName           String   @default("Municipality of Tupi")
+  contact              String   @default("")
+  address              String   @default("") @db.VarChar(300)
+  logoUrl              String?
+  profilePhotoUrl      String?  @db.VarChar(2048)
+  profilePhotoPublicId String?  @db.VarChar(255)
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model News {

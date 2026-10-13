@@ -97,7 +97,7 @@ render.yaml                   Render blueprint
 
 1. Create a Cloudinary account and copy the exact cloud name, API key, and API secret from the Cloudinary dashboard. `CLOUDINARY_CLOUD_NAME` is the account's Cloud name, not the app name `ServeLink`.
 2. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in `.env` (or the hosting provider). If uploads report `Invalid cloud_name`, replace the value with the Cloud name from the dashboard and restart or redeploy the app.
-3. ServeLink requests a short-lived signed upload authorization from its own server and sends selected files directly to Cloudinary. The API secret is never sent to the browser. Images are limited to JPG/PNG/WebP (10 MB); videos to MP4/WebM/MOV (50 MB).
+3. ServeLink requests a short-lived signed upload authorization from its own server and sends selected files directly to Cloudinary. The API secret is never sent to the browser. Images are limited to JPG/PNG/WebP (10 MB); videos to MP4/WebM/MOV (50 MB). Admins can upload a profile picture and office logo from Settings; the profile picture is shown in the admin navigation and signed-in site header.
 4. Report photos and news media use HTTPS Cloudinary URLs. The sample news post intentionally has no external media dependency.
 
 ## Google Gemini assistant

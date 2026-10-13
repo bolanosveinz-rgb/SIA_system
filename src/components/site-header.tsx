@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MapPinned, Menu, Moon, Sun, X } from "lucide-react";
 
-type User = { name: string; role: "ADMIN" | "RESIDENT" };
+type User = {
+  name: string;
+  role: "ADMIN" | "RESIDENT";
+  profile?: { profilePhotoUrl?: string | null } | null;
+};
 
 export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
@@ -17,7 +21,12 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
       document.documentElement.classList.add("dark");
       setDark(true);
     }
-    fetch("/api/auth/me").then((r) => r.json()).then((data) => setUser(data.user)).catch(() => setUser(null));
+    const refreshUser = () => {
+      fetch("/api/auth/me").then((r) => r.json()).then((data) => setUser(data.user)).catch(() => setUser(null));
+    };
+    refreshUser();
+    window.addEventListener("servelink:profile-updated", refreshUser);
+    return () => window.removeEventListener("servelink:profile-updated", refreshUser);
   }, []);
 
   function toggleTheme() {
@@ -44,7 +53,7 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
         <nav className="hidden items-center gap-2 md:flex">
           {heatLink && <Link href="/map" className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--accent-soft)]"><MapPinned size={17} className="text-[#0d9b91]" /> Heat map</Link>}
           {user?.role === "RESIDENT" && <Link href="/my-reports" className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--background)]">My reports</Link>}
-          {user ? <><span className="mx-2 max-w-32 truncate text-sm text-[var(--muted)]">Hi, {user.name.split(" ")[0]}</span><button onClick={logout} className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--background)]">Sign out</button></> : <><Link href="/login" className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--foreground)]">Sign in</Link><Link href="/register" className="rounded-xl bg-[#12365a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d2945]">Create account</Link></>}
+          {user ? <><span className="mx-2 inline-flex max-w-40 items-center gap-2 truncate text-sm text-[var(--muted)]">{user.role === "ADMIN" && user.profile?.profilePhotoUrl && <img src={user.profile.profilePhotoUrl} alt="" className="h-8 w-8 rounded-full object-cover" />}Hi, {user.name.split(" ")[0]}</span><button onClick={logout} className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--background)]">Sign out</button></> : <><Link href="/login" className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--foreground)]">Sign in</Link><Link href="/register" className="rounded-xl bg-[#12365a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0d2945]">Create account</Link></>}
           <button onClick={toggleTheme} className="ml-1 flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--background)]" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
         </nav>
         <div className="flex items-center gap-1 md:hidden">
@@ -56,7 +65,7 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
       {menuOpen && <nav className="absolute inset-x-0 top-full border-b border-[var(--line)] bg-[var(--surface)] p-4 shadow-xl md:hidden">
         {heatLink && <Link href="/map" onClick={() => setMenuOpen(false)} className="flex min-h-12 items-center gap-2 rounded-lg px-3 font-semibold"><MapPinned size={18} className="text-[#0d9b91]" /> Heat map</Link>}
         {user?.role === "RESIDENT" && <Link href="/my-reports" onClick={() => setMenuOpen(false)} className="flex min-h-12 items-center px-3 font-semibold">My reports</Link>}
-        {user ? <button onClick={logout} className="flex min-h-12 w-full items-center px-3 font-semibold">Sign out</button> : <div className="grid grid-cols-2 gap-2 pt-2"><Link href="/login" className="rounded-xl border border-[var(--line)] p-3 text-center font-semibold">Sign in</Link><Link href="/register" className="rounded-xl bg-[#12365a] p-3 text-center font-semibold text-white">Join ServeLink</Link></div>}
+        {user ? <><div className="flex min-h-12 items-center gap-3 px-3 font-semibold">{user.role === "ADMIN" && user.profile?.profilePhotoUrl && <img src={user.profile.profilePhotoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />}Hi, {user.name.split(" ")[0]}</div><button onClick={logout} className="flex min-h-12 w-full items-center px-3 font-semibold">Sign out</button></> : <div className="grid grid-cols-2 gap-2 pt-2"><Link href="/login" className="rounded-xl border border-[var(--line)] p-3 text-center font-semibold">Sign in</Link><Link href="/register" className="rounded-xl bg-[#12365a] p-3 text-center font-semibold text-white">Join ServeLink</Link></div>}
       </nav>}
     </header>
   );
