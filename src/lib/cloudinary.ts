@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export async function deleteCloudinaryAsset(publicId: string, resourceType: "image" | "video") {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) throw new Error("Cloudinary credentials are not configured.");

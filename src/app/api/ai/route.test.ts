@@ -3,11 +3,11 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/ai/route";
 
-function request(ip: string) {
+function request(ip: string, question = "How can I report a local concern?") {
   return new NextRequest("http://localhost:3000/api/ai", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ question: "How can I report a local concern?" }),
+    body: JSON.stringify({ question }),
   });
 }
 
@@ -63,6 +63,36 @@ test("returns actionable setup guidance when the Gemini key is missing", async (
   } finally {
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+  }
+});
+
+test("accepts a question shorter than three characters", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  let sentQuestion: string | undefined;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        contents: Array<{ parts: Array<{ text: string }> }>;
+      };
+      sentQuestion = body.contents[0]?.parts[0]?.text;
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Here is an answer." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.105", "AI"));
+    assert.equal(response.status, 200);
+    assert.equal(sentQuestion, "AI");
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
   }
 });
 

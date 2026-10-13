@@ -4,7 +4,7 @@ import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 
-const questionSchema = z.object({ question: z.string().trim().min(3).max(1000) });
+const questionSchema = z.object({ question: z.string().trim().min(1).max(1000) });
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });

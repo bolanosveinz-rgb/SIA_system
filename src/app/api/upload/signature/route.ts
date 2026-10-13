@@ -13,11 +13,17 @@ export async function POST(request: NextRequest) {
   if (!checkRateLimit(`upload-signature:${user.id}`, 30)) {
     return NextResponse.json({ error: "Too many media uploads. Please try again later." }, { status: 429 });
   }
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) {
     return NextResponse.json({ error: "Media uploads are not configured. Please contact the LGU." }, { status: 503 });
+  }
+  if (cloudName.toLowerCase() === "servelink") {
+    return NextResponse.json(
+      { error: "Cloudinary is misconfigured. Set CLOUDINARY_CLOUD_NAME to the Cloud name shown in your Cloudinary dashboard, not ServeLink." },
+      { status: 503 },
+    );
   }
   const body = uploadSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: "Choose a valid image or video upload type." }, { status: 400 });
