@@ -83,6 +83,8 @@ render.yaml                   Render blueprint
 
    Open <http://localhost:3000>. Resident registration is public; administrator credentials come from the seed environment variables. Do not use the sample administrator values in production.
 
+6. If sign-up reports a database configuration/schema issue, open `/api/health` on the same app origin. A healthy response is `{"status":"ok","database":"ready"}`. For a missing or outdated schema, set `DATABASE_URL` in the environment of the app actually serving the registration page, then run `npm run db:deploy` from a trusted shell with that same URL and restart/redeploy the app. Merely adding the public database URL to Railway does not automatically configure a separate local or Render application.
+
 ## Railway MySQL
 
 1. Create a Railway project and add a MySQL service.

@@ -1,18 +1,26 @@
 import { hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
-import { setSessionCookie } from "@/lib/auth";
-import { routeError, validationError } from "@/lib/http";
+import { hasValidSessionSecret, setSessionCookie } from "@/lib/auth";
+import { validationError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 import { isSameOrigin } from "@/lib/auth";
 import { registerSchema } from "@/lib/validation";
+import { databaseErrorResponse } from "@/lib/database-errors";
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
   const client = getClientAddress(request.headers);
   if (!checkRateLimit(`register:${client}`, 5)) {
     return NextResponse.json({ error: "Too many sign-up attempts. Please try again in 15 minutes." }, { status: 429 });
+  }
+  if (!hasValidSessionSecret()) {
+    console.error("Resident registration unavailable: JWT_SECRET is missing or shorter than 32 characters.");
+    return NextResponse.json(
+      { error: "Account registration is not configured correctly. Set a JWT_SECRET of at least 32 characters in the app environment, then restart the app." },
+      { status: 503 },
+    );
   }
 
   try {
@@ -48,6 +56,9 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
-    return routeError(error);
+    const databaseResponse = databaseErrorResponse(error, "Resident registration");
+    if (databaseResponse) return databaseResponse;
+    console.error("Resident registration failed:", error instanceof Error ? error.name : "Unknown error");
+    return NextResponse.json({ error: "Account registration could not be completed. Check the app's server logs for the registration error." }, { status: 500 });
   }
 }

@@ -14,6 +14,10 @@ function secretKey() {
   return new TextEncoder().encode(secret);
 }
 
+export function hasValidSessionSecret() {
+  return typeof process.env.JWT_SECRET === "string" && process.env.JWT_SECRET.length >= 32;
+}
+
 export type SessionUser = Pick<User, "id" | "name" | "email" | "role">;
 
 export async function createSessionToken(user: SessionUser) {
