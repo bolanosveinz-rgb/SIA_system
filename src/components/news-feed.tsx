@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, MessageCircle, Send, Image as ImageIcon, Play } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,61 @@ type Post = {
   _count: { likes: number; comments: number };
   liked: boolean;
 };
+
+function cloudinaryVideoUrl(url: string, transformation: string, extension: "jpg" | "mp4") {
+  const uploadPath = "/video/upload/";
+  const uploadIndex = url.indexOf(uploadPath);
+  if (uploadIndex === -1) return url;
+  const transformed = `${url.slice(0, uploadIndex + uploadPath.length)}${transformation}/${url.slice(uploadIndex + uploadPath.length)}`;
+  return transformed.replace(/\.(?:mp4|mov|webm)(?=$|\?)/i, `.${extension}`);
+}
+
+function NewsVideo({ media, index }: { media: Media; index: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function playVideo() {
+    try {
+      await videoRef.current?.play();
+    } catch {
+      toast.error("This video could not be played. Please try again.");
+    }
+  }
+
+  function retryVideo() {
+    setFailed(false);
+    videoRef.current?.load();
+    void playVideo();
+  }
+
+  return <div className="relative aspect-[16/9] bg-black">
+    <video
+      ref={videoRef}
+      controls
+      playsInline
+      preload="metadata"
+      poster={cloudinaryVideoUrl(media.url, "so_0,f_jpg", "jpg")}
+      className="h-full w-full object-contain"
+      aria-label={`Community announcement video ${index + 1}`}
+      onPlay={() => { setPlaying(true); setFailed(false); }}
+      onPause={() => setPlaying(false)}
+      onEnded={() => setPlaying(false)}
+      onError={() => setFailed(true)}
+    >
+      <source src={cloudinaryVideoUrl(media.url, "f_mp4", "mp4")} type="video/mp4" />
+    </video>
+    {!playing && !failed && <button
+      type="button"
+      onClick={() => void playVideo()}
+      aria-label={`Play community announcement video ${index + 1}`}
+      className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/65 text-white shadow-lg ring-2 ring-white/80 transition hover:scale-105 hover:bg-[#0d9b91] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0d9b91]"
+    >
+      <Play size={28} fill="currentColor" className="ml-1" />
+    </button>}
+    {failed && <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 px-4 text-center text-sm font-semibold text-white"><span>Video unavailable. Check your connection.</span><button type="button" onClick={retryVideo} className="rounded-lg bg-white/15 px-3 py-1.5 underline underline-offset-2 hover:bg-white/25">Try again</button></div>}
+  </div>;
+}
 
 function timeAgo(value: string) {
   const date = new Date(value);
@@ -97,7 +152,7 @@ export function NewsFeed() {
 
   return <div className="grid gap-5 sm:grid-cols-2">
     {posts.map((post) => <Card key={post.id} className="overflow-hidden">
-      {post.media.length > 0 && <div className="space-y-1 bg-slate-100 dark:bg-slate-800">{post.media.map((media, index) => <div key={media.id} className={index === 0 ? "relative aspect-[16/9]" : "relative aspect-[16/9]"}>{media.type === "VIDEO" ? <video src={media.url} controls className="h-full w-full object-cover" aria-label="LGU news video" /> : <img src={media.url} alt={`Community announcement ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />}{media.type === "VIDEO" && <span className="pointer-events-none absolute left-3 top-3 rounded-lg bg-black/55 p-2 text-white"><Play size={15} /></span>}</div>)}</div>}
+      {post.media.length > 0 && <div className="space-y-1 bg-slate-100 dark:bg-slate-800">{post.media.map((media, index) => <div key={media.id} className="relative aspect-[16/9]">{media.type === "VIDEO" ? <NewsVideo media={media} index={index} /> : <img src={media.url} alt={`Community announcement ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />}</div>)}</div>}
       <div className="p-5">
         <div className="mb-3 flex items-center justify-between text-xs text-[var(--muted)]"><span className="inline-flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[10px] font-bold text-[#0d9b91]">LGU</span> Municipality of Tupi</span><time dateTime={post.createdAt}>{timeAgo(post.createdAt)}</time></div>
         <p className="whitespace-pre-wrap text-sm leading-6">{post.caption}</p>
