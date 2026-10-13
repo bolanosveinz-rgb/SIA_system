@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Bot, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
+import { ResidentSidebar } from "@/components/resident-sidebar";
 import { NewsFeed } from "@/components/news-feed";
 import { Button, Card, Textarea } from "@/components/ui";
 
@@ -35,8 +35,7 @@ export default function HomePage() {
     }
   }
 
-  return <>
-    <SiteHeader />
+  return <ResidentSidebar>
     <main>
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#e8f5f7] via-[#f7fafc] to-[var(--background)] dark:from-[#112a39] dark:via-[#0c1522] dark:to-[var(--background)]" />
@@ -71,5 +70,5 @@ export default function HomePage() {
       </section>
     </main>
     <footer className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-7 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between sm:px-6"><span>© {new Date().getFullYear()} ServeLink · Municipality of Tupi, South Cotabato</span><div className="flex gap-4"><Link href="/login" className="hover:text-[#0d9b91]">Resident sign in</Link><Link href="/admin/login" className="hover:text-[#0d9b91]">LGU portal <ChevronRight className="inline" size={12} /></Link><span className="inline-flex items-center gap-1"><CheckCircle2 size={13} /> Built for the community</span></div></footer>
-  </>;
+  </ResidentSidebar>;
 }
