@@ -169,3 +169,37 @@ test("explains Gemini quota exhaustion and preserves a valid retry interval", as
     else process.env.GEMINI_API_MODEL = oldModel;
   }
 });
+
+test("retries a quota-limited primary model with the alternate Gemini text model", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  const requestedModels: string[] = [];
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (input) => {
+      requestedModels.push(String(input));
+      if (requestedModels.length === 1) {
+        return new Response(JSON.stringify({ error: { status: "RESOURCE_EXHAUSTED" } }), { status: 429 });
+      }
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Gemini answered using the alternate model." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.107"));
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.answer, "Gemini answered using the alternate model.");
+    assert.equal(requestedModels.length, 2);
+    assert.match(requestedModels[0], /models\/gemini-2\.5-flash:generateContent$/);
+    assert.match(requestedModels[1], /models\/gemini-2\.5-flash-lite:generateContent$/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});

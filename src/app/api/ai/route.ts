@@ -6,6 +6,10 @@ import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 
 const questionSchema = z.object({ question: z.string().trim().min(1).max(1000) });
 
+function isQuotaLimited(response: Response) {
+  return response.status === 429;
+}
+
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
   const client = getClientAddress(request.headers);
@@ -30,23 +34,31 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    const requestBody = JSON.stringify({
+      systemInstruction: {
+        parts: [{
+          text: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
+        }],
+      },
+      contents: [{ role: "user", parts: [{ text: parsed.data.question }] }],
+      generationConfig: { maxOutputTokens: 700 },
+    });
+    const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-goog-api-key": apiKey,
       },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{
-            text: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
-          }],
-        },
-        contents: [{ role: "user", parts: [{ text: parsed.data.question }] }],
-        generationConfig: { maxOutputTokens: 700 },
-      }),
+      body: requestBody,
       signal: AbortSignal.timeout(20000),
     });
+    let response = await requestGemini(model);
+    let responseModel = model;
+    if (isQuotaLimited(response)) {
+      responseModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+      console.warn("Gemini model quota reached; retrying with the alternate text model.", { model, fallbackModel: responseModel });
+      response = await requestGemini(responseModel);
+    }
     if (!response.ok) {
       const requestId = response.headers.get("x-guploader-uploadid");
       const result = await response.json().catch(() => null) as { error?: { status?: string } } | null;
@@ -66,7 +78,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status === 404 || providerStatus === "NOT_FOUND") {
         return NextResponse.json(
-          { error: `Google Gemini could not find model "${model}". Check GEMINI_API_MODEL against the Gemini models available to your API key.` },
+          { error: `Google Gemini could not find model "${responseModel}". Check GEMINI_API_MODEL against the Gemini models available to your API key.` },
           { status: 502 },
         );
       }

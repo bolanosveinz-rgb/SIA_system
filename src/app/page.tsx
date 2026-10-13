@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Bot, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
 import { NewsFeed } from "@/components/news-feed";
 import { Button, Card, Textarea } from "@/components/ui";
@@ -13,6 +12,7 @@ const suggestions = ["How do I report a road concern?", "What services does the 
 export default function HomePage() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [assistantError, setAssistantError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function ask(event?: FormEvent<HTMLFormElement>, suggestion?: string) {
@@ -21,6 +21,7 @@ export default function HomePage() {
     if (!prompt || loading) return;
     setQuestion(prompt);
     setAnswer("");
+    setAssistantError("");
     setLoading(true);
     try {
       const response = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: prompt }) });
@@ -28,7 +29,7 @@ export default function HomePage() {
       if (!response.ok) throw new Error(data.error ?? "The assistant could not respond.");
       setAnswer(data.answer);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "The assistant could not respond.");
+      setAssistantError(error instanceof Error ? error.message : "The assistant could not respond. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -54,6 +55,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-3 py-3">{suggestions.map((item) => <button key={item} type="button" onClick={() => void ask(undefined, item)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] hover:text-[#08776f]">{item}</button>)}</div>
           </form>
           {loading && <Card className="mx-auto mt-4 max-w-2xl animate-pulse p-5 text-left"><div className="mb-3 h-3 w-32 rounded bg-[var(--line)]" /><div className="h-3 w-full rounded bg-[var(--line)]" /><div className="mt-2 h-3 w-3/4 rounded bg-[var(--line)]" /><p className="mt-4 text-xs text-[var(--muted)]">Your community assistant is thinking…</p></Card>}
+          {assistantError && <Card role="alert" className="mx-auto mt-4 max-w-2xl border-amber-300 p-4 text-left text-sm text-amber-900 dark:border-amber-800 dark:text-amber-100"><p className="font-semibold">The assistant couldn’t answer just now.</p><p className="mt-1">{assistantError}</p></Card>}
           {answer && <Card className="mx-auto mt-4 max-w-2xl p-5 text-left"><div className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0d9b91]"><Bot size={18} /> ServeLink assistant</div><p className="whitespace-pre-wrap text-sm leading-7">{answer}</p><p className="mt-3 text-[11px] text-[var(--muted)]">For official or urgent information, please confirm with the Municipality of Tupi.</p></Card>}
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/map" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12365a] px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-[#0d2945] sm:w-auto"><MapPinned size={18} /> Report a community concern <ArrowRight size={16} /></Link><Link href="/my-reports" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-bold transition hover:border-[#0d9b91]/40 sm:w-auto">Track my report <ChevronRight size={16} /></Link></div>
         </div>
