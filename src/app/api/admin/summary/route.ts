@@ -17,7 +17,7 @@ export async function GET() {
       prisma.report.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: { resident: { select: { name: true } } },
+        include: { resident: { select: { name: true, residentProfile: { select: { profilePhotoUrl: true } } } } },
       }),
     ]);
     return NextResponse.json({ stats: { residents, reports, pending, resolved, unread }, recentReports });

@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: Context) {
     const comments = await prisma.comment.findMany({
       where: { newsId },
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { name: true, residentProfile: { select: { profilePhotoUrl: true } } } } },
     });
     return NextResponse.json({ comments });
   } catch (error) {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     if (!post) return NextResponse.json({ error: "This news post is no longer available." }, { status: 404 });
     const comment = await prisma.comment.create({
       data: { newsId, userId: user.id, body: parsed.data.body },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { name: true, residentProfile: { select: { profilePhotoUrl: true } } } } },
     });
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {

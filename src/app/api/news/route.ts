@@ -12,7 +12,7 @@ export async function GET() {
       where: user?.role === Role.ADMIN ? {} : { published: true },
       orderBy: { createdAt: "desc" },
       include: {
-        author: { select: { name: true } },
+        author: { select: { name: true, adminProfile: { select: { profilePhotoUrl: true } } } },
         media: { orderBy: { createdAt: "asc" } },
         _count: { select: { likes: true, comments: true } },
         ...(user ? { likes: { where: { userId: user.id }, select: { id: true } } } : {}),

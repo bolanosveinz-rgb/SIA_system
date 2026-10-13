@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import { Button, Card, Input } from "@/components/ui";
 
 type Media = { id: string; url: string; type: "IMAGE" | "VIDEO" };
-type Comment = { id: string; body: string; createdAt: string; user: { name: string } };
+type Comment = { id: string; body: string; createdAt: string; user: { name: string; residentProfile: { profilePhotoUrl: string | null } | null } };
 type Post = {
   id: string;
   caption: string;
   createdAt: string;
   media: Media[];
-  author: { name: string };
+  author: { name: string; adminProfile: { profilePhotoUrl: string | null } | null };
   _count: { likes: number; comments: number };
   liked: boolean;
 };
@@ -154,7 +154,7 @@ export function NewsFeed() {
     {posts.map((post) => <Card key={post.id} className="overflow-hidden">
       {post.media.length > 0 && <div className="space-y-1 bg-slate-100 dark:bg-slate-800">{post.media.map((media, index) => <div key={media.id} className="relative aspect-[16/9]">{media.type === "VIDEO" ? <NewsVideo media={media} index={index} /> : <img src={media.url} alt={`Community announcement ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />}</div>)}</div>}
       <div className="p-5">
-        <div className="mb-3 flex items-center justify-between text-xs text-[var(--muted)]"><span className="inline-flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[10px] font-bold text-[#0d9b91]">LGU</span> Municipality of Tupi</span><time dateTime={post.createdAt}>{timeAgo(post.createdAt)}</time></div>
+        <div className="mb-3 flex items-center justify-between text-xs text-[var(--muted)]"><span className="inline-flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-[var(--accent-soft)] text-[10px] font-bold text-[#0d9b91]">{post.author.adminProfile?.profilePhotoUrl ? <img src={post.author.adminProfile.profilePhotoUrl} alt={`${post.author.name}'s profile`} className="h-full w-full object-cover" /> : "LGU"}</span> Municipality of Tupi</span><time dateTime={post.createdAt}>{timeAgo(post.createdAt)}</time></div>
         <p className="whitespace-pre-wrap text-sm leading-6">{post.caption}</p>
         <div className="mt-4 flex items-center gap-4 border-t border-[var(--line)] pt-3">
           <button onClick={() => toggleLike(post)} aria-label={post.liked ? "Unlike this update" : "Like this update"} className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold transition hover:bg-rose-50 dark:hover:bg-rose-950/40 ${post.liked ? "text-rose-600" : "text-[var(--muted)]"}`}><Heart size={18} className={post.liked ? "fill-current" : ""} />{post._count.likes}</button>
@@ -162,7 +162,7 @@ export function NewsFeed() {
         </div>
         <AnimatePresence initial={false}>{expanded === post.id && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
           <div className="space-y-3 border-t border-[var(--line)] pt-4">
-            <div className="max-h-48 space-y-3 overflow-y-auto">{(comments[post.id] ?? []).length ? comments[post.id].map((comment) => <div key={comment.id} className="rounded-xl bg-[var(--background)] px-3.5 py-2.5"><div className="flex items-center justify-between gap-2"><span className="text-xs font-bold">{comment.user.name}</span><time className="text-[10px] text-[var(--muted)]">{timeAgo(comment.createdAt)}</time></div><p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p></div>) : <p className="py-1 text-center text-xs text-[var(--muted)]">Be the first to comment.</p>}</div>
+            <div className="max-h-48 space-y-3 overflow-y-auto">{(comments[post.id] ?? []).length ? comments[post.id].map((comment) => <div key={comment.id} className="rounded-xl bg-[var(--background)] px-3.5 py-2.5"><div className="flex items-center justify-between gap-2"><span className="flex min-w-0 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--accent-soft)] text-[10px] font-bold text-[#0d9b91]">{comment.user.residentProfile?.profilePhotoUrl ? <img src={comment.user.residentProfile.profilePhotoUrl} alt="" className="h-full w-full object-cover" /> : comment.user.name.slice(0, 1).toUpperCase()}</span><span className="truncate text-xs font-bold">{comment.user.name}</span></span><time className="text-[10px] text-[var(--muted)]">{timeAgo(comment.createdAt)}</time></div><p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p></div>) : <p className="py-1 text-center text-xs text-[var(--muted)]">Be the first to comment.</p>}</div>
             <div className="flex gap-2"><Input aria-label="Write a comment" placeholder="Add a comment…" maxLength={2000} value={drafts[post.id] ?? ""} onChange={(event) => setDrafts((items) => ({ ...items, [post.id]: event.target.value }))} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void addComment(post.id); } }} /><Button aria-label="Post comment" loading={posting === post.id} onClick={() => void addComment(post.id)} className="min-w-11 px-3"><Send size={16} /></Button></div>
           </div>
         </motion.div>}</AnimatePresence>
