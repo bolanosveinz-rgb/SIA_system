@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: process.env.AI_MODEL ?? "claude-sonnet-4-20250514",
+        model: process.env.AI_MODEL ?? "claude-sonnet-5-5",
         max_tokens: 700,
         system: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
         messages: [{ role: "user", content: parsed.data.question }],
@@ -33,8 +33,32 @@ export async function POST(request: NextRequest) {
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) {
-      const detail = await response.text();
-      console.error("Anthropic request failed:", response.status, detail.slice(0, 500));
+      const requestId = response.headers.get("request-id");
+      console.error("Anthropic request failed:", { status: response.status, requestId });
+      if (response.status === 401) {
+        return NextResponse.json(
+          { error: "Anthropic rejected the AI_API_KEY. Create a valid API key in the Anthropic Console, update your app’s environment, and restart the app." },
+          { status: 502 },
+        );
+      }
+      if (response.status === 403) {
+        return NextResponse.json(
+          { error: "This Anthropic key does not have access to the requested model. Check the account’s model access and AI_MODEL setting." },
+          { status: 502 },
+        );
+      }
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: "Anthropic could not find the requested model. Check that AI_MODEL is available to your account." },
+          { status: 502 },
+        );
+      }
+      if (response.status === 429) {
+        return NextResponse.json(
+          { error: "The AI assistant is temporarily rate-limited. Please try again shortly." },
+          { status: 503 },
+        );
+      }
       return NextResponse.json({ error: "The assistant is temporarily unavailable. Please try again shortly." }, { status: 502 });
     }
     const result = (await response.json()) as { content?: Array<{ type: string; text?: string }> };

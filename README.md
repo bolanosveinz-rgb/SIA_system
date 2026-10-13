@@ -102,7 +102,7 @@ render.yaml                   Render blueprint
 
 ## Anthropic assistant
 
-Set `AI_API_KEY` to an Anthropic API key and `AI_MODEL` to a model enabled for that key (the default is `claude-sonnet-4-20250514`). Requests go through `POST /api/ai`; the key and system prompt remain server-side. The endpoint has a basic per-IP request limit and returns an explicit unavailable response when the key is missing.
+Set `AI_API_KEY` to a valid Anthropic API key and `AI_MODEL` to a model enabled for that key (the default is `claude-sonnet-5-5`). Requests go through `POST /api/ai`; the key and system prompt remain server-side. The endpoint has a basic per-IP request limit and reports invalid credentials or unavailable models explicitly.
 
 ## GitHub and branch workflow
 
