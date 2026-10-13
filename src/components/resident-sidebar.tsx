@@ -69,10 +69,15 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
 
   const compactSidebar = collapsed && !mobileNav;
   const sidebar = <div className="flex h-full flex-col">
-    <Link href="/" onClick={() => setMobileNav(false)} title={compactSidebar ? "ServeLink home" : undefined} className={cn("flex h-[72px] items-center gap-3 border-b border-[var(--line)]", compactSidebar ? "justify-center px-2" : "px-5")}>
-      <BrandLogo className="h-12 w-12 shrink-0 rounded-xl object-contain" />
-      {!compactSidebar && <span><span className="block font-extrabold">Serve<span className="text-[#0d9b91]">Link</span></span><span className="text-[10px] font-semibold uppercase tracking-[.13em] text-[var(--muted)]">Tupi community</span></span>}
-    </Link>
+    <div className={cn("flex h-[72px] shrink-0 items-center border-b border-[var(--line)]", compactSidebar ? "justify-center gap-0.5 px-1" : "gap-2 px-4")}>
+      <Link href="/" onClick={() => setMobileNav(false)} title={compactSidebar ? "ServeLink home" : undefined} className={cn("flex min-w-0 items-center gap-3", compactSidebar ? "justify-center" : "flex-1")}>
+        <BrandLogo className={cn("shrink-0 rounded-xl object-contain", compactSidebar ? "h-9 w-9" : "h-12 w-12")} />
+        {!compactSidebar && <span className="min-w-0"><span className="block font-extrabold">Serve<span className="text-[#0d9b91]">Link</span></span><span className="text-[10px] font-semibold uppercase tracking-[.13em] text-[var(--muted)]">Tupi community</span></span>}
+      </Link>
+      <button type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expand resident sidebar" : "Collapse resident sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("hidden shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:flex", compactSidebar ? "h-7 w-7" : "h-9 w-9")}>
+        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
+    </div>
     <div className={cn("pt-6", compactSidebar ? "px-2" : "px-4")}>
       {!compactSidebar && <p className="px-3 text-[10px] font-bold uppercase tracking-[.15em] text-[var(--muted)]">Navigation</p>}
       <nav aria-label="Resident navigation" className="mt-2 space-y-1">
@@ -101,7 +106,6 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
 
   return <div className="min-h-screen bg-[var(--background)]">
     <aside className={cn("fixed inset-y-0 left-0 z-40 hidden border-r border-[var(--line)] bg-[var(--surface)] transition-[width] duration-200 lg:block", collapsed ? "w-[76px]" : "w-64")}>{sidebar}</aside>
-    <button type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expand resident sidebar" : "Collapse resident sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("fixed top-1/2 z-40 hidden h-10 w-7 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] shadow-md transition-[left,color,width] duration-200 hover:w-8 hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:flex", collapsed ? "left-[76px]" : "left-64")}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
     {mobileNav && <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Close navigation" onClick={() => setMobileNav(false)} className="absolute inset-0 bg-slate-950/40" /><aside className="absolute inset-y-0 left-0 w-[275px] bg-[var(--surface)] shadow-2xl">{sidebar}</aside></div>}
     <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-64")}>
     <PortalHeader role="RESIDENT" isAuthenticated={authState === "ready" && user?.role === "RESIDENT"} name={user?.name ?? "Resident"} email={user?.email ?? ""} profilePhotoUrl={user?.profile?.profilePhotoUrl} mobileNavOpen={mobileNav} onToggleSidebar={() => setMobileNav((open) => !open)} />

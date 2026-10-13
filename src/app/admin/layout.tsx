@@ -28,7 +28,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    setCollapsed(localStorage.getItem("servelink-admin-sidebar-collapsed") === "true");
     if (pathname === "/admin/login") return;
     const refreshUser = () => {
       fetch("/api/auth/me").then((r) => r.json()).then((data) => setUser(data.user)).catch(() => undefined);
@@ -37,6 +36,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     window.addEventListener("servelink:profile-updated", refreshUser);
     return () => window.removeEventListener("servelink:profile-updated", refreshUser);
   }, [pathname]);
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem("servelink-admin-sidebar-collapsed") === "true");
+  }, []);
 
   useEffect(() => setMobileNav(false), [pathname]);
 
@@ -89,7 +92,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const compactSidebar = collapsed && !mobileNav;
   const sidebar = <div className="flex h-full flex-col">
-    <Link href="/admin" title={compactSidebar ? "ServeLink admin home" : undefined} className={`flex h-[72px] items-center gap-3 border-b border-[var(--line)] ${compactSidebar ? "justify-center px-2" : "px-5"}`}><BrandLogo className="h-12 w-12 shrink-0 rounded-xl object-contain" />{!compactSidebar && <span><span className="block font-extrabold">Serve<span className="text-[#0d9b91]">Link</span></span><span className="text-[10px] font-semibold uppercase tracking-[.13em] text-[var(--muted)]">LGU workspace</span></span>}</Link>
+    <div className={cn("flex h-[72px] shrink-0 items-center border-b border-[var(--line)]", compactSidebar ? "justify-center gap-0.5 px-1" : "gap-2 px-4")}>
+      <Link href="/admin" title={compactSidebar ? "ServeLink admin home" : undefined} className={cn("flex min-w-0 items-center gap-3", compactSidebar ? "justify-center" : "flex-1")}><BrandLogo className={cn("shrink-0 rounded-xl object-contain", compactSidebar ? "h-9 w-9" : "h-12 w-12")} />{!compactSidebar && <span className="min-w-0"><span className="block font-extrabold">Serve<span className="text-[#0d9b91]">Link</span></span><span className="text-[10px] font-semibold uppercase tracking-[.13em] text-[var(--muted)]">LGU workspace</span></span>}</Link>
+      <button type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expand admin sidebar" : "Collapse admin sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("hidden shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:flex", compactSidebar ? "h-7 w-7" : "h-9 w-9")}>
+        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
+    </div>
     <div className={`pt-6 ${compactSidebar ? "px-2" : "px-4"}`}>{!compactSidebar && <p className="px-3 text-[10px] font-bold uppercase tracking-[.15em] text-[var(--muted)]">Workspace</p>}<nav aria-label="Admin navigation" className="mt-2 space-y-1">{navigation.map(({ href, label, icon: Icon }) => {
       const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
       return <Link key={href} href={href} onClick={() => setMobileNav(false)} aria-label={compactSidebar ? label : undefined} title={compactSidebar ? label : undefined} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center rounded-xl text-sm font-semibold transition", compactSidebar ? "justify-center" : "gap-3 px-3", active ? "bg-[var(--accent-soft)] text-[#08776f] dark:text-[#70e3d6]" : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]")}><Icon size={18} />{!compactSidebar && label}{href === "/admin/reports" && unread > 0 && <span className={cn("flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white", !compactSidebar && "ml-auto")}>{unread > 99 ? "99+" : unread}</span>}</Link>;
@@ -100,7 +108,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return <div className="min-h-screen bg-[var(--background)]">
     <aside className={cn("fixed inset-y-0 left-0 z-40 hidden border-r border-[var(--line)] bg-[var(--surface)] transition-[width] duration-200 lg:block", collapsed ? "w-[76px]" : "w-[252px]")}>{sidebar}</aside>
     {mobileNav && <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Close navigation" onClick={() => setMobileNav(false)} className="absolute inset-0 bg-slate-950/40" /><aside className="absolute inset-y-0 left-0 w-[275px] bg-[var(--surface)] shadow-2xl">{sidebar}</aside></div>}
-    <button type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expand admin sidebar" : "Collapse admin sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("fixed top-1/2 z-40 hidden h-10 w-7 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] shadow-md transition-[left,color,width] duration-200 hover:w-8 hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:flex", collapsed ? "left-[76px]" : "left-[252px]")}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
     <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-[252px]")}>
       <PortalHeader role="ADMIN" name={user?.name ?? "Administrator"} email={user?.email ?? ""} profilePhotoUrl={user?.profile?.profilePhotoUrl} mobileNavOpen={mobileNav} onToggleSidebar={() => setMobileNav((open) => !open)} />
       <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">{children}</main>

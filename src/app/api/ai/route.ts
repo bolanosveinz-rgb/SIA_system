@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!/^gemini-[a-zA-Z0-9.-]+$/.test(model)) {
       console.error("Gemini assistant is misconfigured: GEMINI_CHAT_MODEL or GEMINI_API_MODEL must be a Gemini model ID.");
       return NextResponse.json(
-        { error: "GEMINI_CHAT_MODEL must be a Gemini model ID (for example, gemini-2.5-flash-lite)." },
+        { error: "GEMINI_CHAT_MODEL must be a Gemini model ID (for example, gemini-2.5-flash)." },
         { status: 503 },
       );
     }
@@ -67,9 +67,12 @@ export async function POST(request: NextRequest) {
     });
     let response = await requestGemini(model);
     let responseModel = model;
-    if (isQuotaLimited(response)) {
-      responseModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
-      console.warn("Gemini model quota reached; retrying with the alternate text model.", { model, fallbackModel: responseModel });
+    const isModelUnavailable = (candidate: Response) => candidate.status === 404;
+    const alternateModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+    if (isQuotaLimited(response) || isModelUnavailable(response)) {
+      const reason = isQuotaLimited(response) ? "quota reached" : "model unavailable";
+      responseModel = alternateModel;
+      console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
       response = await requestGemini(responseModel);
     }
     if (!response.ok) {
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status === 404 || providerStatus === "NOT_FOUND") {
         return NextResponse.json(
-          { error: `Google Gemini could not find model "${responseModel}". Check GEMINI_API_MODEL against the Gemini models available to your API key.` },
+          { error: `Google Gemini could not find model "${responseModel}". The app also tried "${model === responseModel ? alternateModel : model}". Set GEMINI_CHAT_MODEL to a text model available to your API key, then restart or redeploy the app.` },
           { status: 502 },
         );
       }
