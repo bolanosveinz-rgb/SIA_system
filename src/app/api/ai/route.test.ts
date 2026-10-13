@@ -3,11 +3,15 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/ai/route";
 
-function request(ip: string, question = "How can I report a local concern?") {
+function request(
+  ip: string,
+  question = "How can I report a local concern?",
+  history?: Array<{ role: "user" | "model"; text: string }>,
+) {
   return new NextRequest("http://localhost:3000/api/ai", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, ...(history ? { history } : {}) }),
   });
 }
 
@@ -84,6 +88,67 @@ test("uses GEMINI_CHAT_MODEL ahead of the backward-compatible API model setting"
     else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("sends prior chat messages to Gemini as conversation context", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let sentContents: unknown;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { contents: unknown };
+      sentContents = body.contents;
+      return Response.json({ candidates: [{ content: { parts: [{ text: "You can track it in My reports." }] } }] });
+    };
+
+    const response = await POST(request("198.51.100.107", "Where can I track it?", [
+      { role: "user", text: "How do I submit a report?" },
+      { role: "model", text: "You can submit one from the community map." },
+    ]));
+    assert.equal(response.status, 200);
+    assert.deepEqual(sentContents, [
+      { role: "user", parts: [{ text: "How do I submit a report?" }] },
+      { role: "model", parts: [{ text: "You can submit one from the community map." }] },
+      { role: "user", parts: [{ text: "Where can I track it?" }] },
+    ]);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
+test("rejects chat history that does not alternate user and model messages", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let called = false;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
+    globalThis.fetch = async () => {
+      called = true;
+      return Response.json({});
+    };
+
+    const response = await POST(request("198.51.100.108", "Next question", [
+      { role: "user", text: "First question" },
+      { role: "user", text: "Invalid repeated user message" },
+    ]));
+    assert.equal(response.status, 400);
+    assert.equal(called, false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
   }
 });
 

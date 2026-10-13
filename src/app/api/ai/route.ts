@@ -4,7 +4,17 @@ import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 
-const questionSchema = z.object({ question: z.string().trim().min(1).max(1000) });
+const messageSchema = z.object({
+  role: z.enum(["user", "model"]),
+  text: z.string().trim().min(1).max(1000),
+});
+const historySchema = z.array(messageSchema).max(12)
+  .refine((messages) => messages.every((message, index) => message.role === (index % 2 === 0 ? "user" : "model")))
+  .refine((messages) => messages.length === 0 || messages[messages.length - 1].role === "model");
+const questionSchema = z.object({
+  question: z.string().trim().min(1).max(1000),
+  history: historySchema.optional(),
+});
 
 function isQuotaLimited(response: Response) {
   return response.status === 429;
@@ -40,7 +50,10 @@ export async function POST(request: NextRequest) {
           text: "You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.",
         }],
       },
-      contents: [{ role: "user", parts: [{ text: parsed.data.question }] }],
+      contents: [
+        ...(parsed.data.history ?? []).map(({ role, text }) => ({ role, parts: [{ text }] })),
+        { role: "user", parts: [{ text: parsed.data.question }] },
+      ],
       generationConfig: { maxOutputTokens: 700 },
     });
     const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {

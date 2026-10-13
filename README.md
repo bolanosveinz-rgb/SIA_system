@@ -6,7 +6,7 @@ ServeLink is a community reporting and information platform connecting residents
 
 - Resident registration and email/phone sign-in; invite-only administrator sign-in.
 - HTTP-only signed JWT session cookies, bcrypt password hashes, Zod validation, role checks on API routes, same-origin mutation checks, and per-process authentication/API rate limits.
-- Resident home page with a server-side Claude-powered community assistant, official news feed, optimistic likes, newest-first comments, and dark/light theme.
+- Resident home page with a ServeLink Search, official news feed, optimistic likes, newest-first comments, and dark/light theme.
 - Interactive Tupi boundary map, report pins, report-density heat layer, reverse geocoding, signed Cloudinary uploads, and resident report/status tracking.
 - LGU dashboard, live report notifications using database-backed notification records and short polling, reports with filters/status/remarks, resident directory, news moderation/CRUD, and editable administrator profile/password.
 - MySQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
@@ -102,7 +102,7 @@ render.yaml                   Render blueprint
 
 ## Google Gemini assistant
 
-Create a Gemini API key in Google AI Studio and make sure Gemini API access is enabled for it. Set `GEMINI_API_KEY` in your local `.env` or hosting-provider environment; `.env.example` intentionally leaves it blank. If Google rejects the key, replace it with a valid AI Studio key and check that its API restrictions allow Gemini API requests. For hosted deployments, update the variable in the provider dashboard and restart or redeploy the app so the new value is loaded. Set `GEMINI_CHAT_MODEL` to a Gemini model enabled for that key (the example uses `gemini-2.5-flash-lite`); this setting takes precedence over the backward-compatible `GEMINI_API_MODEL` setting. A Claude model identifier is not a Gemini model. Requests go through `POST /api/ai`; the key is sent server-to-server in the `x-goog-api-key` header and is never exposed to the browser. The endpoint has a basic per-IP request limit and reports invalid credentials, unavailable models, and quota errors explicitly.
+Create a Gemini API key in Google AI Studio and make sure Gemini API access is enabled for it. Set `GEMINI_API_KEY` in your local `.env` or hosting-provider environment; `.env.example` intentionally leaves it blank. If Google rejects the key, replace it with a valid AI Studio key and check that its API restrictions allow Gemini API requests. For hosted deployments, update the variable in the provider dashboard and restart or redeploy the app so the new value is loaded. Set `GEMINI_CHAT_MODEL` to a Gemini model enabled for that key (the example uses `gemini-2.5-flash-lite`); this setting takes precedence over the backward-compatible `GEMINI_API_MODEL` setting. The resident chatbot keeps the recent conversation context while the page remains open. Requests go through `POST /api/ai`; the key is sent server-to-server in the `x-goog-api-key` header and is never exposed to the browser. The endpoint has a basic per-IP request limit and reports invalid credentials, unavailable models, and quota errors explicitly.
 
 ## GitHub and branch workflow
 

@@ -1,39 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
-import { ArrowRight, Bot, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, ShieldCheck } from "lucide-react";
+import { CommunityChatbot } from "@/components/community-chatbot";
 import { NewsFeed } from "@/components/news-feed";
-import { Button, Card, Textarea } from "@/components/ui";
-
-const suggestions = ["How do I report a road concern?", "What services does the LGU offer?", "How can I follow my report?"];
 
 export default function HomePage() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [assistantError, setAssistantError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function ask(event?: FormEvent<HTMLFormElement>, suggestion?: string) {
-    event?.preventDefault();
-    const prompt = (suggestion ?? question).trim();
-    if (!prompt || loading) return;
-    setQuestion(prompt);
-    setAnswer("");
-    setAssistantError("");
-    setLoading(true);
-    try {
-      const response = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: prompt }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "The assistant could not respond.");
-      setAnswer(data.answer);
-    } catch (error) {
-      setAssistantError(error instanceof Error ? error.message : "The assistant could not respond. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return <>
     <main>
       <section className="relative isolate overflow-hidden">
@@ -44,17 +16,7 @@ export default function HomePage() {
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#0d9b91]/20 bg-[var(--surface)]/75 px-3.5 py-2 text-xs font-semibold text-[#08776f] shadow-sm dark:text-[#70e3d6]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#0d9b91]" /> Your community, better connected</div>
           <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.12] tracking-[-.045em] sm:text-6xl">A better Tupi starts<br className="hidden sm:block" /> with <span className="bg-gradient-to-r from-[#0d9b91] to-[#3ab9a8] bg-clip-text text-transparent">being heard.</span></h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[var(--muted)] sm:text-lg">Ask a question, share a concern, and stay close to the things happening in your community.</p>
-          <form onSubmit={ask} className="group mx-auto mt-9 max-w-2xl rounded-3xl border border-[#dbe9ee] bg-[var(--surface)] p-2 shadow-[0_20px_70px_rgba(28,85,104,.13)] transition duration-300 focus-within:border-[#0d9b91]/50 focus-within:shadow-[0_22px_75px_rgba(13,155,145,.2)] dark:border-[var(--line)]">
-            <div className="flex items-center gap-2 px-3 pt-2 text-xs font-bold uppercase tracking-[.13em] text-[#0d9b91]"><Sparkles size={15} /> Ask ServeLink</div>
-            <div className="flex items-end gap-2 p-1">
-              <Textarea aria-label="Ask the ServeLink assistant" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What would you like to know about Tupi?" className="min-h-20 border-0 bg-transparent px-3 py-3 text-base shadow-none focus:border-0 focus:ring-0 sm:text-lg" maxLength={1000} />
-              <Button type="submit" loading={loading} aria-label="Ask a question" className="mb-1 h-12 w-12 shrink-0 rounded-2xl px-0"><Search size={19} /></Button>
-            </div>
-            <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-3 py-3">{suggestions.map((item) => <button key={item} type="button" onClick={() => void ask(undefined, item)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] hover:text-[#08776f]">{item}</button>)}</div>
-          </form>
-          {loading && <Card className="mx-auto mt-4 max-w-2xl animate-pulse p-5 text-left"><div className="mb-3 h-3 w-32 rounded bg-[var(--line)]" /><div className="h-3 w-full rounded bg-[var(--line)]" /><div className="mt-2 h-3 w-3/4 rounded bg-[var(--line)]" /><p className="mt-4 text-xs text-[var(--muted)]">Your community assistant is thinking…</p></Card>}
-          {assistantError && <Card role="alert" className="mx-auto mt-4 max-w-2xl border-amber-300 p-4 text-left text-sm text-amber-900 dark:border-amber-800 dark:text-amber-100"><p className="font-semibold">The assistant couldn’t answer just now.</p><p className="mt-1">{assistantError}</p></Card>}
-          {answer && <Card className="mx-auto mt-4 max-w-2xl p-5 text-left"><div className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0d9b91]"><Bot size={18} /> ServeLink assistant</div><p className="whitespace-pre-wrap text-sm leading-7">{answer}</p><p className="mt-3 text-[11px] text-[var(--muted)]">For official or urgent information, please confirm with the Municipality of Tupi.</p></Card>}
+          <CommunityChatbot />
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/map" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12365a] px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-[#0d2945] sm:w-auto"><MapPinned size={18} /> Report a community concern <ArrowRight size={16} /></Link><Link href="/my-reports" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-bold transition hover:border-[#0d9b91]/40 sm:w-auto">Track my report <ChevronRight size={16} /></Link></div>
         </div>
       </section>
