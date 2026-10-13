@@ -2,7 +2,6 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { Role, type User } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 
 export const SESSION_COOKIE = "servelink_session";
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;

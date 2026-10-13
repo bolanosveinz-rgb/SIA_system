@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, MessageCircle, Send, Image as ImageIcon, Play, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Image as ImageIcon, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Input } from "@/components/ui";
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, FileText, LayoutDashboard, LogOut, Newspaper, Settings, Users, Menu, X } from "lucide-react";
+import { Bell, FileText, LayoutDashboard, LogOut, Newspaper, Settings, Users, Menu } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/components/ui";
 

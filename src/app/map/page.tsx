@@ -29,7 +29,6 @@ export default function MapPage() {
 
   useEffect(() => {
     let active = true;
-    let timer: number | undefined;
     const load = async () => {
       try {
         const session = await fetch("/api/auth/me").then((response) => response.json());
@@ -48,8 +47,8 @@ export default function MapPage() {
       }
     };
     void load();
-    timer = window.setInterval(() => void load(), 30000);
-    return () => { active = false; if (timer) window.clearInterval(timer); };
+    const timer = window.setInterval(() => void load(), 30000);
+    return () => { active = false; window.clearInterval(timer); };
   }, []);
 
   async function selectLocation(lat: number, lng: number) {

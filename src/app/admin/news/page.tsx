@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, MessageCircle, Pencil, Plus, Trash2, Upload, Video, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Input, Textarea } from "@/components/ui";
+import { Button, Card, Textarea } from "@/components/ui";
 import { uploadToCloudinary, type UploadedMedia } from "@/lib/upload";
 
 type Media = UploadedMedia & { id?: string };
