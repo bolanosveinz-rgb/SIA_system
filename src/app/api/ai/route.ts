@@ -26,11 +26,11 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-    const model = process.env.GEMINI_API_MODEL ?? "gemini-2.5-flash";
+    const model = (process.env.GEMINI_CHAT_MODEL ?? process.env.GEMINI_API_MODEL ?? "gemini-2.5-flash").trim();
     if (!/^gemini-[a-zA-Z0-9.-]+$/.test(model)) {
-      console.error("Gemini assistant is misconfigured: GEMINI_API_MODEL must be a Gemini model ID.");
+      console.error("Gemini assistant is misconfigured: GEMINI_CHAT_MODEL or GEMINI_API_MODEL must be a Gemini model ID.");
       return NextResponse.json(
-        { error: "GEMINI_API_MODEL must be a Gemini model ID (for example, gemini-2.5-flash)." },
+        { error: "GEMINI_CHAT_MODEL must be a Gemini model ID (for example, gemini-2.5-flash-lite)." },
         { status: 503 },
       );
     }

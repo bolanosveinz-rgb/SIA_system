@@ -13,11 +13,13 @@ function request(ip: string, question = "How can I report a local concern?") {
 
 test("calls Google Gemini server-side with its API key in the header and returns the answer", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   let captured: { url: string; key: string | null; body: Record<string, unknown> } | undefined;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
     globalThis.fetch = async (input, init) => {
       captured = {
@@ -47,6 +49,39 @@ test("calls Google Gemini server-side with its API key in the header and returns
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+    if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
+    else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("uses GEMINI_CHAT_MODEL ahead of the backward-compatible API model setting", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldModel = process.env.GEMINI_API_MODEL;
+  const oldFetch = globalThis.fetch;
+  let requestedUrl = "";
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
+    process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (input) => {
+      requestedUrl = String(input);
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Hello from the configured model." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.106"));
+    assert.equal(response.status, 200);
+    assert.match(requestedUrl, /\/v1beta\/models\/gemini-2\.5-flash-lite:generateContent$/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
@@ -68,11 +103,13 @@ test("returns actionable setup guidance when the Gemini key is missing", async (
 
 test("accepts a question shorter than three characters", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   let sentQuestion: string | undefined;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
     globalThis.fetch = async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as {
@@ -91,6 +128,8 @@ test("accepts a question shorter than three characters", async () => {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
@@ -98,11 +137,13 @@ test("accepts a question shorter than three characters", async () => {
 
 test("rejects a Claude model ID instead of sending it to Google Gemini", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   let called = false;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "claude-sonnet-5-5";
     globalThis.fetch = async () => {
       called = true;
@@ -117,6 +158,8 @@ test("rejects a Claude model ID instead of sending it to Google Gemini", async (
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
@@ -124,10 +167,12 @@ test("rejects a Claude model ID instead of sending it to Google Gemini", async (
 
 test("turns Gemini invalid-key errors into a safe and actionable response", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
     globalThis.fetch = async () => new Response(JSON.stringify({
       error: { code: 403, status: "PERMISSION_DENIED", message: "Sensitive provider error details." },
@@ -141,6 +186,8 @@ test("turns Gemini invalid-key errors into a safe and actionable response", asyn
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
@@ -148,10 +195,12 @@ test("turns Gemini invalid-key errors into a safe and actionable response", asyn
 
 test("explains Gemini quota exhaustion and preserves a valid retry interval", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
     globalThis.fetch = async () => new Response(JSON.stringify({
       error: { code: 429, status: "RESOURCE_EXHAUSTED" },
@@ -165,6 +214,8 @@ test("explains Gemini quota exhaustion and preserves a valid retry interval", as
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
@@ -172,11 +223,13 @@ test("explains Gemini quota exhaustion and preserves a valid retry interval", as
 
 test("retries a quota-limited primary model with the alternate Gemini text model", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   const requestedModels: string[] = [];
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
+    delete process.env.GEMINI_CHAT_MODEL;
     process.env.GEMINI_API_MODEL = "gemini-2.5-flash";
     globalThis.fetch = async (input) => {
       requestedModels.push(String(input));
@@ -199,6 +252,8 @@ test("retries a quota-limited primary model with the alternate Gemini text model
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
   }
