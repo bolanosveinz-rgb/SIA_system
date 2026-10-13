@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
 import { toast } from "sonner";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/components/ui";
 
 type PortalRole = "ADMIN" | "RESIDENT";
@@ -23,6 +24,7 @@ type Props = {
   name: string;
   email: string;
   profilePhotoUrl?: string | null;
+  isGuest?: boolean;
   mobileNavOpen?: boolean;
   onToggleSidebar: () => void;
 };
@@ -49,7 +51,7 @@ function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, mobileNavOpen = false, onToggleSidebar }: Props) {
+export function PortalHeader({ role, isAuthenticated = true, name, email, profilePhotoUrl, isGuest = false, mobileNavOpen = false, onToggleSidebar }: Props) {
   const pathname = usePathname();
   const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
@@ -167,6 +169,16 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
   }
 
   return <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--surface)]/90 shadow-[0_4px_20px_rgba(15,40,60,.04)] backdrop-blur-xl">
+    {isGuest ? <div className="flex h-[76px] items-center justify-between px-4 sm:px-6">
+      <Link href="/" aria-label="ServeLink home" className="flex min-w-0 items-center gap-2.5">
+        <BrandLogo className="h-11 w-11 shrink-0 rounded-xl object-contain" />
+        <span className="text-base font-extrabold tracking-tight">Serve<span className="text-[#0d9b91]">Link</span></span>
+      </Link>
+      <div className="flex items-center gap-2">
+        <Link href="/login" className="inline-flex min-h-10 items-center rounded-xl px-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--background)]">Sign in</Link>
+        <Link href="/register" className="inline-flex min-h-10 items-center rounded-xl bg-[#12365a] px-3.5 text-sm font-semibold text-white transition hover:bg-[#0d2945] sm:px-4">Sign up</Link>
+      </div>
+    </div> : <>
     <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6">
       <button type="button" onClick={onToggleSidebar} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen} title={mobileNavOpen ? "Close navigation" : "Open navigation"} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--muted)] transition hover:border-[#0d9b91]/30 hover:bg-[var(--accent-soft)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:hidden">
         {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
@@ -207,5 +219,6 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
         </div>
       </div>
     </div>
+    </>}
   </header>;
 }

@@ -67,6 +67,17 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
     }
   }
 
+  if (authState !== "ready" || !user) {
+    return <div className="min-h-screen bg-[var(--background)]">
+      <PortalHeader role="RESIDENT" isAuthenticated={false} name="" email="" isGuest onToggleSidebar={() => setMobileNav(false)} />
+      {authState === "error" && <div role="alert" className="flex items-center justify-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <span>Your account status could not be checked.</span>
+        <button type="button" onClick={() => window.location.reload()} className="font-bold underline underline-offset-2">Try again</button>
+      </div>}
+      {children}
+    </div>;
+  }
+
   const compactSidebar = collapsed && !mobileNav;
   const sidebar = <div className="flex h-full flex-col">
     <div className={cn("flex h-[72px] shrink-0 items-center border-b border-[var(--line)]", compactSidebar ? "justify-center gap-0.5 px-1" : "gap-2 px-4")}>
@@ -88,18 +99,12 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
       </nav>
     </div>
     <div className={cn("mt-auto", compactSidebar ? "p-2" : "p-4")}>
-      {authState === "loading" && <div aria-label="Loading account" className={cn("animate-pulse rounded-2xl bg-[var(--background)]", compactSidebar ? "mx-auto h-10 w-10" : "h-16")} />}
-      {authState === "error" && <button onClick={() => window.location.reload()} aria-label="Retry loading account" title="Retry loading account" className={cn("flex min-h-10 w-full items-center justify-center rounded-xl text-xs font-semibold text-amber-700 hover:bg-[var(--background)]", !compactSidebar && "px-2")}>{compactSidebar ? <UserRound size={18} /> : "Account unavailable · Retry"}</button>}
-      {authState === "ready" && user && <div className={cn("rounded-2xl bg-[var(--background)]", compactSidebar ? "flex flex-col items-center gap-2 p-2" : "p-3")}>
+      {user && <div className={cn("rounded-2xl bg-[var(--background)]", compactSidebar ? "flex flex-col items-center gap-2 p-2" : "p-3")}>
         <div className={cn("flex items-center", compactSidebar ? "justify-center" : "gap-3")}>
           {user.profile?.profilePhotoUrl ? <img src={user.profile.profilePhotoUrl} alt={`${user.name}'s profile`} className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[#08776f]">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span>}
           {!compactSidebar && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{user.name}</span><span className="block truncate text-[10px] text-[var(--muted)]">{user.email}</span></span>}
         </div>
         <button onClick={() => void logout()} aria-label={compactSidebar ? "Sign out" : undefined} title={compactSidebar ? "Sign out" : undefined} className={cn("flex min-h-9 w-full items-center rounded-lg text-xs font-semibold text-[var(--muted)] hover:bg-[var(--surface)] hover:text-rose-600", compactSidebar ? "justify-center" : "mt-3 gap-2 px-2")}><LogOut size={15} />{!compactSidebar && "Sign out"}</button>
-      </div>}
-      {authState === "ready" && !user && <div className={cn(compactSidebar ? "space-y-2" : "grid grid-cols-2 gap-2")}>
-        <Link href="/login" onClick={() => setMobileNav(false)} aria-label={compactSidebar ? "Sign in" : undefined} title={compactSidebar ? "Sign in" : undefined} className={cn("rounded-xl border border-[var(--line)] text-center text-sm font-semibold", compactSidebar ? "flex min-h-10 items-center justify-center" : "p-3")}>{compactSidebar ? <UserRound size={18} /> : "Sign in"}</Link>
-        <Link href="/register" onClick={() => setMobileNav(false)} aria-label={compactSidebar ? "Join ServeLink" : undefined} title={compactSidebar ? "Join ServeLink" : undefined} className={cn("rounded-xl bg-[#12365a] text-center text-sm font-semibold text-white", compactSidebar ? "flex min-h-10 items-center justify-center" : "p-3")}>{compactSidebar ? "+" : "Join ServeLink"}</Link>
       </div>}
     </div>
   </div>;

@@ -106,17 +106,54 @@ export function CommunityChatbot() {
   const [recording, setRecording] = useState(false);
   const [voiceError, setVoiceError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [chatAccess, setChatAccess] = useState<"checking" | "allowed" | "guest" | "error">("checking");
   const conversationRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me").then(async (response) => {
+      if (!response.ok) throw new Error("Your sign-in status could not be checked.");
+      const result = await response.json() as { user?: unknown };
+      if (active) setChatAccess(result.user ? "allowed" : "guest");
+    }).catch(() => {
+      if (active) setChatAccess("error");
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     const conversation = conversationRef.current;
     if (conversation) conversation.scrollTo({ top: conversation.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  async function requireAccount() {
+    let access = chatAccess;
+    if (access === "checking") {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) throw new Error("Your sign-in status could not be checked.");
+        const result = await response.json() as { user?: unknown };
+        access = result.user ? "allowed" : "guest";
+        setChatAccess(access);
+      } catch {
+        setChatAccess("error");
+        access = "error";
+      }
+    }
+    if (access === "allowed") return true;
+    if (access === "guest") {
+      window.location.assign("/login?returnTo=%2F");
+    } else {
+      setError("ServeLink could not verify your account. Refresh the page and try again.");
+    }
+    return false;
+  }
+
   async function selectImage(file?: File) {
+    if (!await requireAccount()) return;
     if (!file) return;
     setImageError("");
     try {
@@ -134,6 +171,7 @@ export function CommunityChatbot() {
     retryThinkingMode = thinkingMode,
   ) {
     event?.preventDefault();
+    if (!await requireAccount()) return;
     const typedPrompt = (suggestion ?? question).trim();
     const attachment = retrying ? retryImage : selectedImage;
     if ((!typedPrompt && !attachment) || loading) return;
@@ -163,6 +201,11 @@ export function CommunityChatbot() {
       });
       const data = await response.json() as { answer?: unknown; error?: unknown };
       if (!response.ok) {
+        if (response.status === 401) {
+          setChatAccess("guest");
+          window.location.assign("/login?returnTo=%2F");
+          return;
+        }
         throw new Error(typeof data.error === "string" ? data.error : "The assistant could not respond.");
       }
       if (typeof data.answer !== "string" || !data.answer.trim()) {
@@ -189,7 +232,8 @@ export function CommunityChatbot() {
     }
   }
 
-  function toggleVoiceInput() {
+  async function toggleVoiceInput() {
+    if (!await requireAccount()) return;
     if (recording) {
       speechRecognitionRef.current?.stop();
       return;
@@ -251,6 +295,14 @@ export function CommunityChatbot() {
     setFailedMessage(null);
     setThinkingMode(false);
     setVoiceError("");
+  }
+
+  async function toggleAttachmentMenu() {
+    if (await requireAccount()) setAttachmentMenuOpen((open) => !open);
+  }
+
+  async function toggleThinkingMode() {
+    if (await requireAccount()) setThinkingMode((enabled) => !enabled);
   }
 
   return (
@@ -325,7 +377,7 @@ export function CommunityChatbot() {
         <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" disabled={loading} onChange={(event) => { void selectImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
         {voiceError && <p role="alert" className="mb-2 text-xs text-rose-600">{voiceError}</p>}
         <div className="relative flex min-h-[58px] items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-[0_4px_20px_rgba(15,23,42,.06)] transition focus-within:border-[#0d9b91]/40 focus-within:shadow-[0_4px_24px_rgba(13,155,145,.12)] dark:border-[var(--line)] dark:bg-[var(--surface)]">
-          <button type="button" onClick={() => setAttachmentMenuOpen((open) => !open)} disabled={loading} aria-label="Add attachment" aria-expanded={attachmentMenuOpen} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--background)] disabled:opacity-50"><Plus size={23} /></button>
+          <button type="button" onClick={() => void toggleAttachmentMenu()} disabled={loading} aria-label="Add attachment" aria-expanded={attachmentMenuOpen} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--background)] disabled:opacity-50"><Plus size={23} /></button>
           {attachmentMenuOpen && (
             <div className="absolute bottom-full left-2 z-10 mb-2 w-48 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl">
               <button type="button" onClick={() => { setAttachmentMenuOpen(false); uploadInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-[var(--background)]"><ImagePlus size={17} className="text-[#0d9b91]" /> Upload an image</button>
@@ -343,8 +395,8 @@ export function CommunityChatbot() {
             rows={1}
             disabled={loading}
           />
-          <button type="button" onClick={() => setThinkingMode((enabled) => !enabled)} aria-label="Toggle Think mode" aria-pressed={thinkingMode} title="Toggle Think mode" className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-2 text-sm transition sm:px-3 ${thinkingMode ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200" : "text-slate-500 hover:bg-[var(--background)]"}`}><Brain size={18} /><span className="hidden sm:inline">Think</span></button>
-          <button type="button" onClick={toggleVoiceInput} disabled={loading} aria-label={recording ? "Stop voice input" : "Start voice input"} title={recording ? "Stop voice input" : "Speak your message"} aria-pressed={recording} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-50 ${recording ? "bg-rose-50 text-rose-600 motion-safe:animate-pulse dark:bg-rose-950" : "text-[var(--foreground)] hover:bg-[var(--background)]"}`}>
+          <button type="button" onClick={() => void toggleThinkingMode()} aria-label="Toggle Think mode" aria-pressed={thinkingMode} title="Toggle Think mode" className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-2 text-sm transition sm:px-3 ${thinkingMode ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200" : "text-slate-500 hover:bg-[var(--background)]"}`}><Brain size={18} /><span className="hidden sm:inline">Think</span></button>
+          <button type="button" onClick={() => void toggleVoiceInput()} disabled={loading} aria-label={recording ? "Stop voice input" : "Start voice input"} title={recording ? "Stop voice input" : "Speak your message"} aria-pressed={recording} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-50 ${recording ? "bg-rose-50 text-rose-600 motion-safe:animate-pulse dark:bg-rose-950" : "text-[var(--foreground)] hover:bg-[var(--background)]"}`}>
             {recording ? <MicOff size={19} /> : <Mic size={19} />}
           </button>
           <Button type="submit" loading={loading} disabled={!question.trim() && !selectedImage} aria-label="Send message" className="h-11 min-h-11 w-11 shrink-0 rounded-full bg-[#4f76e8] p-0 text-white hover:bg-[#3f64d5] dark:bg-[#4f76e8] dark:text-white">
@@ -355,6 +407,7 @@ export function CommunityChatbot() {
           <span className="inline-flex items-center gap-1"><Sparkles size={12} /> Voice is transcribed by your browser; photos are sent to Gemini.</span>
           <span className="hidden sm:inline"><MessageCircle size={12} className="inline" /> {recording ? "Listening…" : "Enter to send"}</span>
         </div>
+        {chatAccess === "guest" && <p className="mt-2 text-center text-xs text-[var(--muted)]"><a href="/login?returnTo=%2F" className="font-semibold text-[#0d9b91] hover:underline">Sign in or sign up to chat with ServeLink</a></p>}
       </form>
     </Card>
   );

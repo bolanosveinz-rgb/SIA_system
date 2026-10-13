@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { BARANGAYS } from "@/lib/places";
@@ -11,6 +11,10 @@ import { BrandLogo } from "@/components/brand-logo";
 
 type Props = { mode: "register" | "resident-login" | "admin-login" };
 
+function safeReturnTo(value: string | null) {
+  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/";
+}
+
 export function AuthForm({ mode }: Props) {
   const router = useRouter();
   const isRegister = mode === "register";
@@ -18,6 +22,12 @@ export function AuthForm({ mode }: Props) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [returnTo, setReturnTo] = useState("");
+
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("returnTo");
+    if (value) setReturnTo(safeReturnTo(value));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +59,8 @@ export function AuthForm({ mode }: Props) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to sign in. Please try again.");
       toast.success(isRegister ? "Welcome to ServeLink!" : "You’re signed in.");
-      router.push(isAdmin ? "/admin" : "/");
+      const requestedPath = new URLSearchParams(window.location.search).get("returnTo");
+      router.push(isAdmin ? "/admin" : safeReturnTo(requestedPath));
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to sign in. Please try again.");
@@ -81,7 +92,7 @@ export function AuthForm({ mode }: Props) {
         <Button type="submit" loading={loading} className="w-full">{isRegister ? "Create resident account" : isAdmin ? "Sign in to dashboard" : "Sign in"}</Button>
         {isAdmin && <p className="flex items-center justify-center gap-2 text-center text-xs text-[var(--muted)]"><ShieldCheck size={15} className="text-[#0d9b91]" /> Administrator access is invite-only.</p>}
       </form>
-      <p className="mt-5 text-center text-sm text-[var(--muted)]">{isRegister ? <>Already have an account? <Link href="/login" className="font-bold text-[#0d9b91] hover:underline">Sign in</Link></> : isAdmin ? <Link href="/" className="font-semibold hover:text-[#0d9b91]">← Back to ServeLink</Link> : <>New to ServeLink? <Link href="/register" className="font-bold text-[#0d9b91] hover:underline">Create an account</Link></>}</p>
+      <p className="mt-5 text-center text-sm text-[var(--muted)]">{isRegister ? <>Already have an account? <Link href={`/login${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} className="font-bold text-[#0d9b91] hover:underline">Sign in</Link></> : isAdmin ? <Link href="/" className="font-semibold hover:text-[#0d9b91]">← Back to ServeLink</Link> : <>New to ServeLink? <Link href={`/register${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} className="font-bold text-[#0d9b91] hover:underline">Create an account</Link></>}</p>
     </div>
   );
 }
