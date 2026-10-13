@@ -18,8 +18,15 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = registerSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
-    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } });
-    if (existing) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    if (parsed.data.email === (process.env.ADMIN_EMAIL ?? "admin@tupi.gov.ph").trim().toLowerCase()) {
+      return NextResponse.json({ error: "This email address is reserved for LGU administration." }, { status: 409 });
+    }
+    const [existingEmail, existingPhone] = await Promise.all([
+      prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } }),
+      prisma.residentProfile.findUnique({ where: { phone: parsed.data.phone }, select: { id: true } }),
+    ]);
+    if (existingEmail) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    if (existingPhone) return NextResponse.json({ error: "An account with this phone number already exists." }, { status: 409 });
     const user = await prisma.user.create({
       data: {
         name: parsed.data.name,

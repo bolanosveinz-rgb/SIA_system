@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { CalendarClock, LocateFixed, MapPin, Upload, X } from "lucide-react";
@@ -26,6 +26,7 @@ export default function MapPage() {
   const [reverseLoading, setReverseLoading] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const geocodeRequest = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +54,7 @@ export default function MapPage() {
 
   async function selectLocation(lat: number, lng: number) {
     if (!isInsideTupi(lat, lng)) return toast.error("Please choose a location within the Tupi map area.");
+    const requestId = ++geocodeRequest.current;
     const residentBarangay = user?.profile?.barangay ?? "";
     setSelected({ lat, lng, address: "Looking up address…", barangay: residentBarangay });
     setReverseLoading(true);
@@ -60,12 +62,15 @@ export default function MapPage() {
       const response = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Address lookup failed.");
+      if (requestId !== geocodeRequest.current) return;
       const detected = BARANGAYS.find((name) => data.barangay?.toLowerCase().includes(name.toLowerCase())) ?? residentBarangay;
       setSelected({ lat, lng, address: data.address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`, barangay: detected });
     } catch {
-      setSelected({ lat, lng, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}, Tupi, South Cotabato`, barangay: residentBarangay });
+      if (requestId === geocodeRequest.current) {
+        setSelected({ lat, lng, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}, Tupi, South Cotabato`, barangay: residentBarangay });
+      }
     } finally {
-      setReverseLoading(false);
+      if (requestId === geocodeRequest.current) setReverseLoading(false);
     }
   }
 
@@ -122,7 +127,7 @@ export default function MapPage() {
           {selected ? <Card className="p-5 sm:p-6">
             <div className="mb-4 flex items-start justify-between"><div><div className="flex items-center gap-2 text-sm font-bold"><MapPin size={17} className="text-[#0d9b91]" /> Report location</div><p className="mt-1 text-xs text-[var(--muted)]">Review the location, then tell us what happened.</p></div><button onClick={() => setSelected(null)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--background)]" aria-label="Clear selected location"><X size={18} /></button></div>
             <div className="mb-4 space-y-2 rounded-xl bg-[var(--background)] p-3.5 text-xs"><p className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 shrink-0 text-[#0d9b91]" /><span>{reverseLoading ? "Looking up address…" : selected.address}</span></p><p className="pl-6 text-[var(--muted)]">{selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}{selected.barangay ? ` · ${selected.barangay}` : ""}</p><p className="flex items-center gap-2 pl-6 text-[var(--muted)]"><CalendarClock size={13} />{new Date().toLocaleString("en-PH")}</p></div>
-            {user?.role === "ADMIN" ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">Administrator accounts cannot submit resident reports. Sign in with a resident account to report a concern.</p> : <form onSubmit={submitReport} className="space-y-3.5"><label className="block space-y-1.5 text-xs font-bold">Report title<Input name="title" required minLength={4} maxLength={160} placeholder="e.g. Damaged road near…" /></label><label className="block space-y-1.5 text-xs font-bold">Describe the issue<Textarea name="description" required minLength={10} maxLength={5000} placeholder="Tell us what happened and how it affects the community…" className="min-h-24 text-sm" /></label><label className="block space-y-1.5 text-xs font-bold">Photo <span className="font-normal text-[var(--muted)]">(optional)</span><span className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-xs font-medium text-[var(--muted)]"><Upload size={15} /><input aria-label="Upload a report photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="min-w-0 flex-1 file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--accent-soft)] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#08776f]" /></span>{photo && <span className="flex items-center justify-between text-xs font-normal text-[var(--muted)]">{photo.name}<button type="button" onClick={() => setPhoto(null)} aria-label="Remove selected photo"><X size={14} /></button></span>}</label>{uploadProgress > 0 && <div className="h-1.5 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full bg-[#0d9b91] transition-all" style={{ width: `${uploadProgress}%` }} /></div>}{!user && <p className="text-xs text-[var(--muted)]">Please <Link className="font-bold text-[#0d9b91] underline" href="/login">sign in</Link> or <Link className="font-bold text-[#0d9b91] underline" href="/register">create an account</Link> to submit.</p>}<Button loading={formLoading} type="submit" className="w-full">Submit report</Button><p className="text-center text-[10px] leading-4 text-[var(--muted)]">Your report is shared with authorized LGU staff for follow-up.</p></form>}
+            {user?.role === "ADMIN" ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-100">Administrator accounts cannot submit resident reports. Sign in with a resident account to report a concern.</p> : <form onSubmit={submitReport} className="space-y-3.5"><label className="block space-y-1.5 text-xs font-bold">Report title<Input name="title" required minLength={4} maxLength={160} placeholder="e.g. Damaged road near…" /></label><label className="block space-y-1.5 text-xs font-bold">Describe the issue<Textarea name="description" required minLength={10} maxLength={5000} placeholder="Tell us what happened and how it affects the community…" className="min-h-24 text-sm" /></label><label className="block space-y-1.5 text-xs font-bold">Photo <span className="font-normal text-[var(--muted)]">(optional)</span><span className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-xs font-medium text-[var(--muted)]"><Upload size={15} /><input aria-label="Upload a report photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="min-w-0 flex-1 file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--accent-soft)] file:px-2 file:py-1 file:text-xs file:font-semibold file:text-[#08776f]" /></span>{photo && <span className="flex items-center justify-between text-xs font-normal text-[var(--muted)]">{photo.name}<button type="button" onClick={() => setPhoto(null)} aria-label="Remove selected photo"><X size={14} /></button></span>}</label>{uploadProgress > 0 && <div className="h-1.5 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full bg-[#0d9b91] transition-all" style={{ width: `${uploadProgress}%` }} /></div>}{!user && <p className="text-xs text-[var(--muted)]">Please <Link className="font-bold text-[#0d9b91] underline" href="/login">sign in</Link> or <Link className="font-bold text-[#0d9b91] underline" href="/register">create an account</Link> to submit.</p>}<Button loading={formLoading} disabled={reverseLoading} type="submit" className="w-full">Submit report</Button><p className="text-center text-[10px] leading-4 text-[var(--muted)]">Your report is shared with authorized LGU staff for follow-up.</p></form>}
           </Card> : <Card className="flex min-h-72 flex-col items-center justify-center p-6 text-center"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[#0d9b91]"><MapPin size={25} /></div><h2 className="font-bold">Choose a location</h2><p className="mt-2 max-w-xs text-sm leading-6 text-[var(--muted)]">Tap anywhere on the map to drop a pin and tell the LGU about a community concern.</p><div className="mt-5 flex items-center gap-2 rounded-full bg-[var(--background)] px-3 py-2 text-xs text-[var(--muted)]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#0d9b91]" /> Live community map</div></Card>}
         </aside>
       </div>

@@ -12,18 +12,6 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email },
-    update: {
-      adminProfile: {
-        upsert: {
-          create: {
-            officeName: "Municipality of Tupi",
-            contact: process.env.ADMIN_PHONE ?? "",
-            address: "Tupi, South Cotabato",
-          },
-          update: {},
-        },
-      },
-    },
     create: {
       name: process.env.ADMIN_NAME ?? "ServeLink Administrator",
       email,
@@ -34,6 +22,23 @@ async function main() {
           officeName: "Municipality of Tupi",
           contact: process.env.ADMIN_PHONE ?? "",
           address: "Tupi, South Cotabato",
+        },
+      },
+    },
+    update: {
+      name: process.env.ADMIN_NAME ?? "ServeLink Administrator",
+      passwordHash: await hash(password, 12),
+      role: Role.ADMIN,
+      adminProfile: {
+        upsert: {
+          create: {
+            officeName: "Municipality of Tupi",
+            contact: process.env.ADMIN_PHONE ?? "",
+            address: "Tupi, South Cotabato",
+          },
+          update: {
+            contact: process.env.ADMIN_PHONE ?? "",
+          },
         },
       },
     },

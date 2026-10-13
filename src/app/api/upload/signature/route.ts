@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
   const resourceType = body.data.resourceType;
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = user.role === Role.ADMIN ? "servelink/news" : "servelink/reports";
-  const params = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+  const allowedFormats = resourceType === "video" ? "mp4,mov,webm" : "jpg,jpeg,png,webp";
+  const params = `allowed_formats=${allowedFormats}&folder=${folder}&timestamp=${timestamp}${apiSecret}`;
   const signature = createHash("sha1").update(params).digest("hex");
-  return NextResponse.json({ cloudName, apiKey, timestamp, signature, folder, resourceType });
+  return NextResponse.json({ cloudName, apiKey, timestamp, signature, folder, resourceType, allowedFormats });
 }

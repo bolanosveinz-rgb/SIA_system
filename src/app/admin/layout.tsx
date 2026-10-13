@@ -25,8 +25,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileNav, setMobileNav] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me").then((r) => r.json()).then((data) => setUser(data.user)).catch(() => undefined);
-    let latest = "";
+    if (pathname === "/admin/login") return;
+    const refreshUser = () => {
+      fetch("/api/auth/me").then((r) => r.json()).then((data) => setUser(data.user)).catch(() => undefined);
+    };
+    refreshUser();
+    window.addEventListener("servelink:profile-updated", refreshUser);
+    return () => window.removeEventListener("servelink:profile-updated", refreshUser);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname === "/admin/login") return;
+    const seen = new Set<string>();
     let initializing = true;
     const poll = async () => {
       try {
@@ -36,14 +46,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setUnread(data.unread);
         const notifications = data.notifications as NotificationItem[];
         if (initializing) {
-          latest = notifications[0]?.createdAt ?? "";
+          notifications.forEach((item) => seen.add(item.id));
           initializing = false;
           return;
         }
-        const recent = notifications.filter((item) => !latest || item.createdAt > latest);
-        for (const item of recent.reverse()) {
+        for (const item of [...notifications].reverse()) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
           if (item.type === "NEW_REPORT") toast.info(item.message, { duration: 7000, action: { label: "View reports", onClick: () => router.push("/admin/reports") } });
-          latest = item.createdAt;
+        }
+        if (seen.size > 250) {
+          seen.clear();
+          for (const notification of notifications) seen.add(notification.id);
         }
       } catch {
         toast.error("Live notifications are temporarily unavailable.");
@@ -52,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     void poll();
     const timer = window.setInterval(() => void poll(), 12000);
     return () => window.clearInterval(timer);
-  }, [router]);
+  }, [pathname, router]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });

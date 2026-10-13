@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     }
     const from = query.get("from");
     const to = query.get("to");
-    const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
-    const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
+    const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : undefined;
+    const toDate = to ? new Date(`${to}T23:59:59.999Z`) : undefined;
     if ((fromDate && !Number.isFinite(fromDate.getTime())) || (toDate && !Number.isFinite(toDate.getTime()))) {
       return NextResponse.json({ error: "Choose valid date filters." }, { status: 400 });
     }

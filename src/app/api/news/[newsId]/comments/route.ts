@@ -11,6 +11,12 @@ const commentSchema = z.object({ body: z.string().trim().min(1, "Write a comment
 export async function GET(_request: NextRequest, { params }: Context) {
   try {
     const { newsId } = await params;
+    const viewer = await getSessionUser();
+    const post = await prisma.news.findFirst({
+      where: { id: newsId, ...(viewer?.role === Role.ADMIN ? {} : { published: true }) },
+      select: { id: true },
+    });
+    if (!post) return NextResponse.json({ error: "This news post was not found." }, { status: 404 });
     const comments = await prisma.comment.findMany({
       where: { newsId },
       orderBy: { createdAt: "desc" },
@@ -30,6 +36,8 @@ export async function POST(request: NextRequest, { params }: Context) {
     const parsed = commentSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
     const { newsId } = await params;
+    const post = await prisma.news.findFirst({ where: { id: newsId, published: true }, select: { id: true } });
+    if (!post) return NextResponse.json({ error: "This news post is no longer available." }, { status: 404 });
     const comment = await prisma.comment.create({
       data: { newsId, userId: user.id, body: parsed.data.body },
       include: { user: { select: { name: true } } },

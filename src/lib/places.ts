@@ -1,3 +1,6 @@
+import boundary from "@/data/tupi-boundary.json";
+import type { Feature, Polygon } from "geojson";
+
 export const BARANGAYS = [
   "Acmonan",
   "Bololmala",
@@ -6,6 +9,7 @@ export const BARANGAYS = [
   "Cebuano",
   "Crossing Rubber",
   "Kablon",
+  "Juan-Loreto Tamayo",
   "Kalkam",
   "Linan",
   "Lunen",
@@ -18,8 +22,6 @@ export const BARANGAYS = [
 ];
 
 export const TUPI_CENTER: [number, number] = [6.3333, 124.95];
-import boundary from "@/data/tupi-boundary.json";
-import type { Feature, Polygon } from "geojson";
 
 export const TUPI_BOUNDS: [[number, number], [number, number]] = [
   [6.2382124, 124.8680091],

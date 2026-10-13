@@ -39,7 +39,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secretKey());
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
     if (
       typeof payload.sub !== "string" ||
       typeof payload.name !== "string" ||
@@ -77,7 +77,14 @@ export function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
-    return new URL(origin).host === new URL(request.url).host;
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const requestUrl = new URL(request.url);
+    const expectedHost = forwardedHost ?? request.headers.get("host") ?? requestUrl.host;
+    const expectedProtocol = forwardedProtocol ? `${forwardedProtocol.replace(/:$/, "")}:` : requestUrl.protocol;
+    const trustedOrigin = new URL(`${expectedProtocol}//${expectedHost}`);
+    const receivedOrigin = new URL(origin);
+    return receivedOrigin.origin === trustedOrigin.origin;
   } catch {
     return false;
   }

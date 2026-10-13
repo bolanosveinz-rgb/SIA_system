@@ -10,6 +10,11 @@ export async function POST(request: NextRequest, { params }: Context) {
   const { user, response } = await requireUser(Role.RESIDENT);
   if (!user) return response;
   const { newsId } = await params;
+  const post = await prisma.news.findFirst({
+    where: { id: newsId, published: true },
+    select: { id: true },
+  });
+  if (!post) return NextResponse.json({ error: "This news post is no longer available." }, { status: 404 });
   const existing = await prisma.like.findUnique({ where: { userId_newsId: { userId: user.id, newsId } } });
   if (existing) await prisma.like.delete({ where: { id: existing.id } });
   else {

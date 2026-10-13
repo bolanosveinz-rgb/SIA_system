@@ -65,6 +65,7 @@ export default function AdminSettingsPage() {
       if (!response.ok) throw new Error(data.error ?? "Profile could not be updated.");
       setProfile(data.profile);
       setPhoto(null);
+      window.dispatchEvent(new Event("servelink:profile-updated"));
       toast.success("LGU profile saved.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Profile could not be updated.");

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify } from "jose/jwt/verify";
 
 const COOKIE = "servelink_session";
 
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret.length < 32) throw new Error("JWT_SECRET must contain at least 32 characters.");
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ["HS256"] });
     const isAdmin = payload.role === "ADMIN";
     if ((adminPage || adminApi) && !isAdmin) {
       if (adminApi) return NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 });

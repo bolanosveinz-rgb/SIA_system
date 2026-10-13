@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
-import { requireUser } from "@/lib/auth";
+import { isSameOrigin, requireUser } from "@/lib/auth";
 import { routeError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH() {
+export async function PATCH(request: NextRequest) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
   const { user, response } = await requireUser(Role.ADMIN);
   if (!user) return response;
   try {

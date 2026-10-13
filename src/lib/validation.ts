@@ -18,8 +18,8 @@ export const loginSchema = z.object({
 export const reportSchema = z.object({
   title: z.string().trim().min(4, "Title must be at least 4 characters.").max(160),
   description: z.string().trim().min(10, "Description must be at least 10 characters.").max(5000),
-  lat: z.number().min(6.19).max(6.49),
-  lng: z.number().min(124.77).max(125.12),
+  lat: z.number().min(6.2382124).max(6.4610003),
+  lng: z.number().min(124.8680091).max(125.1198653),
   address: z.string().trim().max(300).default(""),
   barangay: z.string().trim().max(100).default(""),
   photoUrl: z.string().url().max(2048).refine((value) => {

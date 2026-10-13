@@ -125,7 +125,7 @@ Tiles are provided by OpenStreetMap. Address lookup uses the public Nominatim re
 | `/api/ai` | Public, rate limited | Server-side Anthropic assistant |
 | `/api/news` and `/api/news/:id/*` | Public read; residents like/comment; admins manage | News, likes, comments, moderation |
 | `/api/reports` | Residents see their reports; admins see/filter all | Report creation, review, status changes |
-| `/api/reports/map` | Resident | Minimal community map markers without reporter/contact details |
+| `/api/reports/map` | Public | Minimal community map markers without reporter/contact details |
 | `/api/admin/*` | Admin only | Dashboard, notifications, resident directory, settings |
 | `/api/upload/signature` | Signed-in user | Short-lived Cloudinary upload authorization |
 | `/api/geocode` | Public, rate limited | Tupi-bounded reverse geocoding |

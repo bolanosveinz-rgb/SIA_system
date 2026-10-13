@@ -21,6 +21,7 @@ export async function uploadToCloudinary(file: File, onProgress?: (progress: num
   form.append("api_key", signature.apiKey);
   form.append("timestamp", String(signature.timestamp));
   form.append("folder", signature.folder);
+  form.append("allowed_formats", signature.allowedFormats);
   form.append("signature", signature.signature);
 
   return new Promise((resolve, reject) => {
