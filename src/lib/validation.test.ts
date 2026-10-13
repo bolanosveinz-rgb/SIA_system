@@ -27,6 +27,18 @@ test("rejects barangays outside Tupi", () => {
   assert.equal(result.success, false);
 });
 
+test("rejects passwords longer than bcrypt's 72-byte input limit", () => {
+  const result = registerSchema.safeParse({
+    name: "Juan Dela Cruz",
+    email: "juan@example.com",
+    phone: "+63 917 123 4567",
+    barangay: "Poblacion",
+    address: "Poblacion, Tupi",
+    password: "á".repeat(37),
+  });
+  assert.equal(result.success, false);
+});
+
 test("accepts a valid report pin within the municipal polygon", () => {
   const result = reportSchema.safeParse({
     title: "Road needs repair",

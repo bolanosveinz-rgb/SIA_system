@@ -53,7 +53,7 @@ ServeLink is a community reporting and information platform connecting residents
    npm run db:seed
    ```
 
-   For local development, `NODE_ENV` is normally unset, so seeding also creates a sample resident (`resident@example.com` / `Resident123!`), a welcome news post, and a sample report. These sample accounts and records are **not** seeded when `NODE_ENV=production`.
+   The seed script enforces the configured administrator role and password; rerunning it resets that account to the `ADMIN_*` values above. For local development, `NODE_ENV` is normally unset, so seeding also creates a sample resident (`resident@example.com` / `Resident123!`), a welcome news post, and a sample report. These sample accounts and records are **not** seeded when `NODE_ENV=production`.
 
 5. Start the application:
 

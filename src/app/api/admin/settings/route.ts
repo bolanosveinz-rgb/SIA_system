@@ -16,7 +16,10 @@ const profileSchema = z.object({
 });
 const passwordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8).max(100),
+  newPassword: z.string()
+    .min(8, "Password must be at least 8 characters.")
+    .max(100)
+    .refine((value) => new TextEncoder().encode(value).length <= 72, "Use a password no longer than 72 bytes."),
 });
 
 export async function GET() {

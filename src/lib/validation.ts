@@ -7,7 +7,10 @@ export const registerSchema = z.object({
   phone: z.string().trim().min(7, "Enter a valid phone number.").max(32),
   barangay: z.string().refine((value) => BARANGAYS.includes(value), "Choose a barangay in Tupi."),
   address: z.string().trim().min(5, "Enter your complete address.").max(300),
-  password: z.string().min(8, "Password must be at least 8 characters.").max(100),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters.")
+    .max(100)
+    .refine((value) => new TextEncoder().encode(value).length <= 72, "Use a password no longer than 72 bytes."),
 });
 
 export const loginSchema = z.object({
