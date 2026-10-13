@@ -46,7 +46,7 @@ export function SiteHeader({ heatLink = true }: { heatLink?: boolean }) {
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--surface)]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5" aria-label="ServeLink home">
-          <BrandLogo className="h-10 w-10 shrink-0 rounded-xl object-contain" />
+          <BrandLogo className="h-12 w-12 shrink-0 rounded-xl object-contain" />
           <span><span className="block text-base font-extrabold tracking-tight">Serve<span className="text-[#0d9b91]">Link</span></span><span className="block text-[10px] font-medium tracking-[.12em] text-[var(--muted)] uppercase">Tupi, South Cotabato</span></span>
         </Link>
         <nav className="hidden items-center gap-2 md:flex">

@@ -61,7 +61,7 @@ export function AuthForm({ mode }: Props) {
   return (
     <div className="mx-auto w-full max-w-[460px]">
       <div className="mb-7 text-center">
-        <BrandLogo className="mx-auto mb-5 h-14 w-14 rounded-2xl object-contain" />
+        <BrandLogo className="mx-auto mb-5 h-16 w-16 rounded-2xl object-contain" />
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{isRegister ? "Join your community" : isAdmin ? "LGU sign in" : "Welcome back"}</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">{isRegister ? "Create an account to connect with your local government." : isAdmin ? "Secure access for authorized LGU administrators." : "Sign in to stay connected with Tupi."}</p>
       </div>
