@@ -7,6 +7,7 @@ ServeLink is a community reporting and information platform connecting residents
 - Resident registration and email/phone sign-in; invite-only administrator sign-in.
 - HTTP-only signed JWT session cookies, bcrypt password hashes, Zod validation, role checks on API routes, same-origin mutation checks, and per-process authentication/API rate limits.
 - Public community home and official news feed, with expandable long descriptions. Residents sign in to use the Gemini chatbot, like or comment on updates, and open the report map, their reports, or their profile.
+- Community news displays one full-width update at a time with previous/next navigation; video controls appear on interaction and auto-hide after three seconds.
 - Public Install app button on the home page linking to the ServeLink download shared through Google Drive.
 - ServeLink brand logo and site icon use `public/municipal_design_download.svg`.
 - Interactive Tupi boundary map, report pins, report-density heat layer, reverse geocoding, signed Cloudinary uploads, and resident report/status tracking in the signed-in resident portal.
