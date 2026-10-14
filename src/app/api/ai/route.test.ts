@@ -255,7 +255,7 @@ test("rejects unsupported image types before calling Gemini", async () => {
   }
 });
 
-test("returns photo-specific guidance when Gemini exceeds the request timeout", async () => {
+test("returns retry guidance when Gemini exceeds the request timeout", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldFetch = globalThis.fetch;
@@ -269,7 +269,8 @@ test("returns photo-specific guidance when Gemini exceeds the request timeout", 
     const response = await POST(request("198.51.100.116"));
     const body = await response.json();
     assert.equal(response.status, 504);
-    assert.match(body.error, /within 35 seconds/);
+    assert.match(body.error, /within 60 seconds/);
+    assert.match(body.error, /available to retry/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;

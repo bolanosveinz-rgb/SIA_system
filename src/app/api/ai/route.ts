@@ -3,6 +3,8 @@ import { z } from "zod";
 import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 
+const GEMINI_REQUEST_TIMEOUT_MS = 60_000;
+
 const imageSchema = z.object({
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   data: z.string().min(4).max(5_600_000).regex(/^[A-Za-z0-9+/]+={0,2}$/).refine((data) => data.length % 4 === 0),
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
         "x-goog-api-key": apiKey,
       },
       body: requestBody,
-      signal: AbortSignal.timeout(35000),
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     });
     let response = await requestGemini(model);
     let responseModel = model;
@@ -255,7 +257,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
     if (error instanceof Error && error.name === "TimeoutError") {
       return NextResponse.json(
-        { error: "Gemini did not finish within 35 seconds. Try a smaller photo or a shorter message, then send it again." },
+        { error: "Google Gemini did not respond within 60 seconds. Your message is still available to retry. Try again shortly; if it keeps timing out, use a shorter question or a smaller photo." },
         { status: 504 },
       );
     }

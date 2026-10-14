@@ -85,30 +85,13 @@ function timeAgo(value: string) {
 
 function NewsDescription({ caption }: { caption: string }) {
   const [expanded, setExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-  const descriptionRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    if (expanded || !descriptionRef.current) return;
-    const element = descriptionRef.current;
-    const measure = () => setCanExpand(element.scrollHeight > element.clientHeight + 1);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [caption, expanded]);
+  const firstSentence = Array.from(new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(caption))[0]?.segment.trimEnd() ?? caption;
+  const canExpand = firstSentence.trimEnd().length < caption.trimEnd().length;
 
   return <>
     <p
-      ref={descriptionRef}
       className="whitespace-pre-wrap text-sm leading-6"
-      style={expanded ? undefined : {
-        display: "-webkit-box",
-        WebkitBoxOrient: "vertical",
-        WebkitLineClamp: 4,
-        overflow: "hidden",
-      }}
-    >{caption}</p>
+    >{expanded ? caption : firstSentence}</p>
     {canExpand && <button
       type="button"
       onClick={() => setExpanded((value) => !value)}

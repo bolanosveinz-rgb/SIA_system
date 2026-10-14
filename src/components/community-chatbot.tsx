@@ -315,7 +315,8 @@ export function CommunityChatbot() {
   }
 
   const hasRetryGuidance = error.toLowerCase().includes("temporarily unavailable")
-    || error.toLowerCase().includes("quota");
+    || error.toLowerCase().includes("quota")
+    || error.toLowerCase().includes("did not respond within");
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
@@ -366,11 +367,11 @@ export function CommunityChatbot() {
             <div className="flex items-start gap-3">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200"><Clock3 size={16} /></span>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">The assistant couldn’t connect to Google Gemini</p>
+                <p className="font-semibold">{error.toLowerCase().includes("did not respond within") ? "Google Gemini is taking longer than expected" : "The assistant couldn’t connect to Google Gemini"}</p>
                 <p className="mt-1 leading-5">{error}</p>
-                {showRetryGuidance && <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs leading-5 text-amber-950 dark:bg-black/20 dark:text-amber-100">{error.toLowerCase().includes("quota") ? "Google does not provide an exact reset time here. Check your project’s quota in Google AI Studio; once it resets, you can retry this message." : "There’s no guaranteed recovery time because this delay is on Google’s side. Wait a few minutes before retrying. If it keeps happening, check Google AI Studio service status and try again later."}</p>}
+                {showRetryGuidance && <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs leading-5 text-amber-950 dark:bg-black/20 dark:text-amber-100">{error.toLowerCase().includes("quota") ? "Google does not provide an exact reset time here. Check your project’s quota in Google AI Studio; once it resets, you can retry this message." : error.toLowerCase().includes("did not respond within") ? "The request reached its 60-second wait limit. Google may be responding slowly, so an exact recovery time is not available. Retry shortly; if it happens again, simplify your question or attach a smaller photo." : "There’s no guaranteed recovery time because this delay is on Google’s side. Wait a few minutes before retrying. If it keeps happening, check Google AI Studio service status and try again later."}</p>}
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  {hasRetryGuidance && <button type="button" onClick={() => setShowRetryGuidance((visible) => !visible)} aria-expanded={showRetryGuidance} className="text-xs font-semibold underline decoration-amber-500/50 underline-offset-4 hover:decoration-amber-700">{showRetryGuidance ? "Hide wait guidance" : "How long should I wait?"}</button>}
+                  {hasRetryGuidance && <button type="button" onClick={() => setShowRetryGuidance((visible) => !visible)} aria-expanded={showRetryGuidance} className="text-xs font-semibold underline decoration-amber-500/50 underline-offset-4 hover:decoration-amber-700">{showRetryGuidance ? "Hide wait guidance" : error.toLowerCase().includes("did not respond within") ? "Why is this taking so long?" : "How long should I wait?"}</button>}
                   {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="text-xs font-bold underline decoration-amber-600/50 underline-offset-4 hover:decoration-amber-800">Retry this message</button>}
                 </div>
               </div>
