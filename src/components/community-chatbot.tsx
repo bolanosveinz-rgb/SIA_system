@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Bot, Brain, Camera, ImagePlus, MessageCircle, Mic, MicOff, Plus, RotateCcw, Send, Sparkles, UserRound, X } from "lucide-react";
+import { AudioLines, Bot, Brain, Camera, ImagePlus, Mic, MicOff, Plus, RotateCcw, Send, UserRound, X } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 
 const suggestions = [
@@ -107,6 +107,7 @@ export function CommunityChatbot() {
   const [voiceError, setVoiceError] = useState("");
   const [loading, setLoading] = useState(false);
   const [chatAccess, setChatAccess] = useState<"checking" | "allowed" | "guest" | "error">("checking");
+  const [open, setOpen] = useState(false);
   const conversationRef = useRef<HTMLDivElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -143,11 +144,15 @@ export function CommunityChatbot() {
         access = "error";
       }
     }
-    if (access === "allowed") return true;
+    if (access === "allowed") {
+      setOpen(true);
+      return true;
+    }
     if (access === "guest") {
       window.location.assign("/login?returnTo=%2F");
     } else {
       setError("ServeLink could not verify your account. Refresh the page and try again.");
+      setOpen(true);
     }
     return false;
   }
@@ -306,78 +311,68 @@ export function CommunityChatbot() {
   }
 
   return (
-    <Card className="mx-auto mt-9 max-w-2xl overflow-hidden text-left shadow-[0_20px_70px_rgba(28,85,104,.13)]">
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-3">
-          <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0d9b91]/10 text-[#0d9b91]">
-            <span className="absolute inset-0 rounded-2xl bg-[#0d9b91]/15 motion-safe:animate-ping" />
-            <Bot size={21} className="relative motion-safe:animate-pulse" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold">Chat with ServeLink</h2>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)]"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span> Gemini community assistant · Live</p>
-          </div>
-        </div>
-        {history.length > 0 && (
-          <Button type="button" variant="ghost" onClick={startNewChat} className="min-h-9 gap-1.5 px-2 text-xs" aria-label="Start a new chat">
-            <RotateCcw size={14} /> <span className="hidden sm:inline">New chat</span>
-          </Button>
-        )}
-      </div>
-
-      <div ref={conversationRef} aria-label="Chat messages" aria-live="polite" className="max-h-[360px] min-h-48 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
-        {messages.map((message, index) => (
-          <div key={`${index}-${message.role}`} className={`flex items-end gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-            {message.role === "assistant" && <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>}
-            <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-br-md bg-[#12365a] text-white dark:bg-[#a8d1ff] dark:text-[#10253b]" : "rounded-bl-md bg-[var(--background)] text-[var(--foreground)]"}`}>
-              {message.imagePreview && <img src={message.imagePreview} alt="Photo sent to ServeLink" className="mb-2 max-h-52 max-w-full rounded-xl object-contain" />}
-              {message.text}
+    <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
+      <div className="relative mx-auto w-full max-w-5xl">
+        {open && <Card className="absolute inset-x-0 bottom-full mb-3 overflow-hidden text-left shadow-[0_20px_70px_rgba(28,85,104,.2)]">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0d9b91]/10 text-[#0d9b91]">
+                <span className="absolute inset-0 rounded-2xl bg-[#0d9b91]/15 motion-safe:animate-ping" />
+                <Bot size={21} className="relative motion-safe:animate-pulse" />
+              </span>
+              <div>
+                <h2 className="text-sm font-bold">Chat with ServeLink</h2>
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--muted)]"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span> Gemini community assistant · Live</p>
+              </div>
             </div>
-            {message.role === "user" && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-200"><UserRound size={15} /></span>}
-          </div>
-        ))}
-        {loading && (
-          <div role="status" className="flex items-end gap-2.5">
-            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>
-            <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-[var(--background)] px-4 py-3 text-sm text-[var(--muted)]">
-              <span className="flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:240ms]" /></span>
-              {selectedImage || messages[messages.length - 1]?.imagePreview ? "ServeLink is reviewing the photo…" : "ServeLink is typing"}
+            <div className="flex items-center gap-1">
+              {history.length > 0 && <Button type="button" variant="ghost" onClick={startNewChat} className="min-h-9 gap-1.5 px-2 text-xs" aria-label="Start a new chat"><RotateCcw size={14} /> <span className="hidden sm:inline">New chat</span></Button>}
+              <button type="button" onClick={() => { setOpen(false); setAttachmentMenuOpen(false); }} aria-label="Close chat" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[var(--foreground)]"><X size={18} /></button>
             </div>
           </div>
-        )}
-      </div>
 
-      {history.length === 0 && !loading && (
-        <div className="flex flex-wrap gap-2 px-4 pb-4 sm:px-5">
-          {suggestions.map((item) => (
-            <button key={item} type="button" onClick={() => void sendMessage(undefined, item)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] hover:text-[#08776f]">
-              {item}
-            </button>
-          ))}
-        </div>
-      )}
+          <div ref={conversationRef} aria-label="Chat messages" aria-live="polite" className="max-h-[min(42vh,360px)] min-h-32 space-y-4 overflow-y-auto px-4 py-5 sm:px-5">
+            {messages.map((message, index) => (
+              <div key={`${index}-${message.role}`} className={`flex items-end gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                {message.role === "assistant" && <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>}
+                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === "user" ? "rounded-br-md bg-[#12365a] text-white dark:bg-[#a8d1ff] dark:text-[#10253b]" : "rounded-bl-md bg-[var(--background)] text-[var(--foreground)]"}`}>
+                  {message.imagePreview && <img src={message.imagePreview} alt="Photo sent to ServeLink" className="mb-2 max-h-52 max-w-full rounded-xl object-contain" />}
+                  {message.text}
+                </div>
+                {message.role === "user" && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-200"><UserRound size={15} /></span>}
+              </div>
+            ))}
+            {loading && <div role="status" className="flex items-end gap-2.5">
+              <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0d9b91]/10 text-[#0d9b91]"><Bot size={15} className="motion-safe:animate-pulse" /></span>
+              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-[var(--background)] px-4 py-3 text-sm text-[var(--muted)]">
+                <span className="flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#0d9b91] [animation-delay:240ms]" /></span>
+                {selectedImage || messages[messages.length - 1]?.imagePreview ? "ServeLink is reviewing the photo…" : "ServeLink is typing"}
+              </div>
+            </div>}
+          </div>
 
-      {error && (
-        <div role="alert" className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:mx-5">
-          <p>{error}</p>
-          {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="mt-1 font-semibold underline underline-offset-2">Retry this message</button>}
-        </div>
-      )}
+          {history.length === 0 && !loading && <div className="flex flex-wrap gap-2 px-4 pb-4 sm:px-5">
+            {suggestions.map((item) => <button key={item} type="button" onClick={() => void sendMessage(undefined, item)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] hover:text-[#08776f]">{item}</button>)}
+          </div>}
 
-      <form onSubmit={(event) => void sendMessage(event)} className="border-t border-[var(--line)] p-3 sm:p-4">
-        {selectedImage && (
-          <div className="mb-3 inline-flex items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--background)] p-2">
+          {error && <div role="alert" className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:mx-5">
+            <p>{error}</p>
+            {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="mt-1 font-semibold underline underline-offset-2">Retry this message</button>}
+          </div>}
+        </Card>}
+        <form onSubmit={(event) => void sendMessage(event)} onClick={() => setOpen(true)} onFocusCapture={() => setOpen(true)} className="relative rounded-full border border-slate-200 bg-white p-2 shadow-[0_8px_32px_rgba(15,23,42,.16)] transition focus-within:border-[#0d9b91]/50 focus-within:shadow-[0_8px_36px_rgba(13,155,145,.2)] dark:border-[var(--line)] dark:bg-[var(--surface)]">
+        {open && selectedImage && (
+          <div className="mb-2 ml-2 inline-flex items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--background)] p-2">
             <img src={selectedImage.preview} alt="Selected photo preview" className="h-16 w-16 rounded-lg object-cover" />
             <span className="pt-1 text-xs text-[var(--muted)]">Photo ready to send</span>
             <button type="button" aria-label="Remove selected photo" onClick={() => setSelectedImage(null)} className="rounded-full p-1 text-[var(--muted)] hover:bg-[var(--surface)] hover:text-rose-600"><X size={15} /></button>
           </div>
         )}
-        {imageError && <p role="alert" className="mb-2 text-xs text-rose-600">{imageError}</p>}
+        {open && (imageError || voiceError) && <p role="alert" className="mb-2 px-3 pt-2 text-xs text-rose-600">{imageError || voiceError}</p>}
         <input ref={uploadInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={loading} onChange={(event) => { void selectImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
         <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" disabled={loading} onChange={(event) => { void selectImage(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-        {voiceError && <p role="alert" className="mb-2 text-xs text-rose-600">{voiceError}</p>}
-        <div className="relative flex min-h-[58px] items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-[0_4px_20px_rgba(15,23,42,.06)] transition focus-within:border-[#0d9b91]/40 focus-within:shadow-[0_4px_24px_rgba(13,155,145,.12)] dark:border-[var(--line)] dark:bg-[var(--surface)]">
-          <button type="button" onClick={() => void toggleAttachmentMenu()} disabled={loading} aria-label="Add attachment" aria-expanded={attachmentMenuOpen} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--background)] disabled:opacity-50"><Plus size={23} /></button>
+        <div className="relative flex min-h-[52px] items-center gap-1.5 px-1 sm:min-h-[58px] sm:gap-2 sm:px-2">
+          <button type="button" onClick={() => void toggleAttachmentMenu()} disabled={loading} aria-label={selectedImage ? "Add attachment, photo selected" : "Add attachment"} aria-expanded={attachmentMenuOpen} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--background)] disabled:opacity-50 sm:h-10 sm:w-10"><Plus size={23} />{selectedImage && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#0d9b91]" />}</button>
           {attachmentMenuOpen && (
             <div className="absolute bottom-full left-2 z-10 mb-2 w-48 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl">
               <button type="button" onClick={() => { setAttachmentMenuOpen(false); uploadInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-[var(--background)]"><ImagePlus size={17} className="text-[#0d9b91]" /> Upload an image</button>
@@ -390,25 +385,21 @@ export function CommunityChatbot() {
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask ServeLink"
-            className="min-h-10 max-h-28 min-w-0 resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none focus:border-0 focus:ring-0"
+            className="min-h-10 max-h-28 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none focus:border-0 focus:ring-0"
             maxLength={1000}
             rows={1}
             disabled={loading}
           />
-          <button type="button" onClick={() => void toggleThinkingMode()} aria-label="Toggle Think mode" aria-pressed={thinkingMode} title="Toggle Think mode" className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-2 text-sm transition sm:px-3 ${thinkingMode ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200" : "text-slate-500 hover:bg-[var(--background)]"}`}><Brain size={18} /><span className="hidden sm:inline">Think</span></button>
-          <button type="button" onClick={() => void toggleVoiceInput()} disabled={loading} aria-label={recording ? "Stop voice input" : "Start voice input"} title={recording ? "Stop voice input" : "Speak your message"} aria-pressed={recording} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-50 ${recording ? "bg-rose-50 text-rose-600 motion-safe:animate-pulse dark:bg-rose-950" : "text-[var(--foreground)] hover:bg-[var(--background)]"}`}>
+          <button type="button" onClick={() => void toggleThinkingMode()} aria-label="Toggle Think mode" aria-pressed={thinkingMode} title="Toggle Think mode" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm transition sm:h-10 sm:w-auto sm:gap-2 sm:px-3 ${thinkingMode ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200" : "text-slate-500 hover:bg-[var(--background)]"}`}><Brain size={18} /><span className="hidden sm:inline">Think</span></button>
+          <button type="button" onClick={() => void toggleVoiceInput()} disabled={loading} aria-label={recording ? "Stop voice input" : "Start voice input"} title={recording ? "Stop voice input" : "Speak your message"} aria-pressed={recording} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition disabled:opacity-50 sm:h-10 sm:w-10 ${recording ? "bg-rose-50 text-rose-600 motion-safe:animate-pulse dark:bg-rose-950" : "text-[var(--foreground)] hover:bg-[var(--background)]"}`}>
             {recording ? <MicOff size={19} /> : <Mic size={19} />}
           </button>
-          <Button type="submit" loading={loading} disabled={!question.trim() && !selectedImage} aria-label="Send message" className="h-11 min-h-11 w-11 shrink-0 rounded-full bg-[#4f76e8] p-0 text-white hover:bg-[#3f64d5] dark:bg-[#4f76e8] dark:text-white">
+          <Button type="submit" loading={loading} disabled={!question.trim() && !selectedImage} aria-label="Send message" className="h-10 min-h-10 w-10 shrink-0 rounded-full bg-[#4f76e8] p-0 text-white hover:bg-[#3f64d5] dark:bg-[#4f76e8] dark:text-white sm:h-11 sm:min-h-11 sm:w-11">
             {loading ? null : question.trim() || selectedImage ? <Send size={18} /> : <AudioLines size={21} />}
           </Button>
         </div>
-        <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-[var(--muted)]">
-          <span className="inline-flex items-center gap-1"><Sparkles size={12} /> Voice is transcribed by your browser; photos are sent to Gemini.</span>
-          <span className="hidden sm:inline"><MessageCircle size={12} className="inline" /> {recording ? "Listening…" : "Enter to send"}</span>
-        </div>
-        {chatAccess === "guest" && <p className="mt-2 text-center text-xs text-[var(--muted)]"><a href="/login?returnTo=%2F" className="font-semibold text-[#0d9b91] hover:underline">Sign in or sign up to chat with ServeLink</a></p>}
       </form>
-    </Card>
+      </div>
+    </div>
   );
 }
