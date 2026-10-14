@@ -168,7 +168,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
     return notification.report ? `/my-reports?reportId=${encodeURIComponent(notification.report.id)}` : "/my-reports";
   }
 
-  return <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--surface)]/90 shadow-[0_4px_20px_rgba(15,40,60,.04)] backdrop-blur-xl">
+  return <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--surface)]/95 shadow-[0_6px_24px_rgba(15,40,60,.045)] backdrop-blur-xl">
     {isGuest ? <div className="flex h-[76px] items-center justify-between px-4 sm:px-6">
       <Link href="/" aria-label="ServeLink home" className="flex min-w-0 items-center gap-2.5">
         <BrandLogo className="h-11 w-11 shrink-0 rounded-xl object-contain" />

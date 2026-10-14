@@ -673,6 +673,7 @@ test("reports persistent Gemini server failures without a generic assistant erro
     const body = await response.json();
     assert.equal(response.status, 503);
     assert.match(body.error, /Google Gemini is temporarily unavailable/);
+    assert.match(body.error, /no guaranteed recovery time/i);
     assert.doesNotMatch(body.error, /The assistant is temporarily unavailable/);
   } finally {
     globalThis.fetch = oldFetch;

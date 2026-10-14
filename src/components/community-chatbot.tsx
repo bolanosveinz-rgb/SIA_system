@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { AudioLines, Bot, Brain, Camera, ImagePlus, Mic, MicOff, Plus, RotateCcw, Send, UserRound, X } from "lucide-react";
+import { AudioLines, Bot, Brain, Camera, Clock3, ImagePlus, Mic, MicOff, Plus, RotateCcw, Send, UserRound, X } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 
 const suggestions = [
@@ -98,6 +98,7 @@ export function CommunityChatbot() {
   const [history, setHistory] = useState<GeminiMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
+  const [showRetryGuidance, setShowRetryGuidance] = useState(false);
   const [imageError, setImageError] = useState("");
   const [selectedImage, setSelectedImage] = useState<ChatImage | null>(null);
   const [failedMessage, setFailedMessage] = useState<{ prompt: string; image: ChatImage | null; thinkingMode: boolean } | null>(null);
@@ -184,6 +185,7 @@ export function CommunityChatbot() {
 
     setQuestion("");
     setError("");
+    setShowRetryGuidance(false);
     setFailedMessage(null);
     if (!retrying) {
       setSelectedImage(null);
@@ -218,6 +220,7 @@ export function CommunityChatbot() {
       }
 
       const answer = data.answer.trim();
+      setShowRetryGuidance(false);
       setMessages((current) => [...current, { role: "assistant", text: answer }]);
       const previousHistory = attachment
         ? history.map(({ role, text }) => ({ role, text }))
@@ -295,6 +298,7 @@ export function CommunityChatbot() {
     setHistory([]);
     setQuestion("");
     setError("");
+    setShowRetryGuidance(false);
     setImageError("");
     setSelectedImage(null);
     setFailedMessage(null);
@@ -309,6 +313,9 @@ export function CommunityChatbot() {
   async function toggleThinkingMode() {
     if (await requireAccount()) setThinkingMode((enabled) => !enabled);
   }
+
+  const hasRetryGuidance = error.toLowerCase().includes("temporarily unavailable")
+    || error.toLowerCase().includes("quota");
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
@@ -356,8 +363,18 @@ export function CommunityChatbot() {
           </div>}
 
           {error && <div role="alert" className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:mx-5">
-            <p>{error}</p>
-            {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="mt-1 font-semibold underline underline-offset-2">Retry this message</button>}
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200"><Clock3 size={16} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">The assistant couldn’t connect to Google Gemini</p>
+                <p className="mt-1 leading-5">{error}</p>
+                {showRetryGuidance && <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs leading-5 text-amber-950 dark:bg-black/20 dark:text-amber-100">{error.toLowerCase().includes("quota") ? "Google does not provide an exact reset time here. Check your project’s quota in Google AI Studio; once it resets, you can retry this message." : "There’s no guaranteed recovery time because this delay is on Google’s side. Wait a few minutes before retrying. If it keeps happening, check Google AI Studio service status and try again later."}</p>}
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  {hasRetryGuidance && <button type="button" onClick={() => setShowRetryGuidance((visible) => !visible)} aria-expanded={showRetryGuidance} className="text-xs font-semibold underline decoration-amber-500/50 underline-offset-4 hover:decoration-amber-700">{showRetryGuidance ? "Hide wait guidance" : "How long should I wait?"}</button>}
+                  {failedMessage && <button type="button" onClick={() => void sendMessage(undefined, failedMessage.prompt, true, failedMessage.image, failedMessage.thinkingMode)} className="text-xs font-bold underline decoration-amber-600/50 underline-offset-4 hover:decoration-amber-800">Retry this message</button>}
+                </div>
+              </div>
+            </div>
           </div>}
         </Card>}
         <form onSubmit={(event) => void sendMessage(event)} onClick={() => setOpen(true)} onFocusCapture={() => setOpen(true)} className="relative rounded-full border border-slate-200 bg-white p-2 shadow-[0_8px_32px_rgba(15,23,42,.16)] transition focus-within:border-[#0d9b91]/50 focus-within:shadow-[0_8px_36px_rgba(13,155,145,.2)] dark:border-[var(--line)] dark:bg-[var(--surface)]">

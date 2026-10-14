@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status >= 500 || providerStatus === "INTERNAL" || providerStatus === "UNAVAILABLE") {
         return NextResponse.json(
-          { error: "Google Gemini is temporarily unavailable on the models enabled for this key. The assistant tried alternate models; please try again shortly and check Google AI Studio service status if this continues." },
+          { error: "Google Gemini is temporarily unavailable on the models enabled for this key. The assistant tried alternate models. There is no guaranteed recovery time; wait a few minutes and try again. If the problem continues, check Google AI Studio service status." },
           { status: 503 },
         );
       }

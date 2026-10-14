@@ -23,7 +23,7 @@ export function Button({ variant = "primary", loading, className, children, disa
   };
   return (
     <button
-      className={cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-55", variants[variant], className)}
+      className={cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition duration-200 hover:shadow-md active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none", variants[variant], className)}
       disabled={disabled || loading}
       {...props}
     >
@@ -33,7 +33,7 @@ export function Button({ variant = "primary", loading, className, children, disa
   );
 }
 
-const controlClass = "w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)]/70 hover:border-slate-300 focus:border-[#0d9b91] focus:ring-4 focus:ring-[#0d9b91]/10";
+const controlClass = "w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)]/70 hover:border-slate-300 focus:border-[#0d9b91] focus:ring-4 focus:ring-[#0d9b91]/10 disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(controlClass, className)} {...props} />;
@@ -44,7 +44,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 }
 
 export function Card({ className, children }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_8px_28px_rgba(27,57,87,.045)]", className)}>{children}</div>;
+  return <div className={cn("rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_10px_32px_rgba(27,57,87,.055)] transition-shadow duration-200", className)}>{children}</div>;
 }
 
 export function StatusBadge({ status }: { status: string }) {
