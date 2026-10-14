@@ -4,14 +4,6 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { AudioLines, Bot, Brain, Camera, Clock3, ImagePlus, Mic, MicOff, Plus, RotateCcw, Send, UserRound, X } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 
-const suggestions = [
-  "How do I report a road concern?",
-  "What services does the LGU offer?",
-  "How can I follow my report?",
-];
-
-const welcomeMessage = "Hi! I’m ServeLink, your community assistant. Ask me about using ServeLink or finding municipal services in Tupi.";
-
 type ChatMessage = {
   role: "assistant" | "user";
   text: string;
@@ -94,7 +86,7 @@ async function prepareChatImage(file: File): Promise<ChatImage> {
 }
 
 export function CommunityChatbot() {
-  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: welcomeMessage }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [history, setHistory] = useState<GeminiMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
@@ -294,7 +286,7 @@ export function CommunityChatbot() {
   }
 
   function startNewChat() {
-    setMessages([{ role: "assistant", text: welcomeMessage }]);
+    setMessages([]);
     setHistory([]);
     setQuestion("");
     setError("");
@@ -321,7 +313,7 @@ export function CommunityChatbot() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
       <div className="relative mx-auto w-full max-w-5xl">
-        {open && <Card className="absolute inset-x-0 bottom-full mb-3 overflow-hidden text-left shadow-[0_20px_70px_rgba(28,85,104,.2)]">
+        {open && (messages.length > 0 || error) && <Card className="absolute inset-x-0 bottom-full mb-3 overflow-hidden text-left shadow-[0_20px_70px_rgba(28,85,104,.2)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
             <div className="flex items-center gap-3">
               <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0d9b91]/10 text-[#0d9b91]">
@@ -358,10 +350,6 @@ export function CommunityChatbot() {
               </div>
             </div>}
           </div>
-
-          {history.length === 0 && !loading && <div className="flex flex-wrap gap-2 px-4 pb-4 sm:px-5">
-            {suggestions.map((item) => <button key={item} type="button" onClick={() => void sendMessage(undefined, item)} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] hover:text-[#08776f]">{item}</button>)}
-          </div>}
 
           {error && <div role="alert" className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 sm:mx-5">
             <div className="flex items-start gap-3">
