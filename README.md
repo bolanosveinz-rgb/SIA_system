@@ -8,7 +8,7 @@ ServeLink is a community reporting and information platform connecting residents
 - HTTP-only signed JWT session cookies, bcrypt password hashes, Zod validation, role checks on API routes, same-origin mutation checks, and per-process authentication/API rate limits.
 - Public community home and official news feed, with expandable long descriptions. Residents sign in to use the Gemini chatbot, like or comment on updates, and open the report map, their reports, or their profile.
 - Community news previews show up to six words before expanding to the full description.
-- Community news displays the latest full-width update; video controls appear on interaction and auto-hide after three seconds.
+- Community news displays all published updates, including image and video media; video controls appear on interaction and auto-hide after three seconds.
 - Public Install app button on the home page linking to the ServeLink download shared through Google Drive.
 - ServeLink brand logo and site icon use `public/municipal_design_download.svg`.
 - Administrator sign-in uses a responsive split-panel layout with LGU access guidance.
