@@ -52,6 +52,7 @@ test("calls Google Gemini server-side with its API key in the header and returns
       parts: [{ text: "How can I report a local concern?" }],
     }]);
     assert.ok(captured.body.systemInstruction);
+    assert.deepEqual(captured.body.generationConfig, { maxOutputTokens: 8192 });
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -93,6 +94,36 @@ test("does not enforce an application question-count limit", async () => {
     else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("accepts a detailed question longer than the former 1000-character limit", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  const question = `Please explain this in detail. ${"Tell me more about the community services. ".repeat(80)}`.trim();
+  let sentQuestion = "";
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { contents: Array<{ parts: Array<{ text: string }> }> };
+      sentQuestion = body.contents[0].parts[0].text;
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: "Here is a detailed answer." }] } }],
+      });
+    };
+
+    const response = await POST(request("198.51.100.117", question));
+    assert.equal(response.status, 200);
+    assert.equal(sentQuestion, question);
+    assert.ok(question.length > 1000);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
   }
 });
 
@@ -217,7 +248,8 @@ test("enables careful response instructions when Think mode is selected", async 
       body: JSON.stringify({ question: "What should I do?", thinkingMode: true }),
     }));
     assert.equal(response.status, 200);
-    assert.match(systemInstruction, /carefully consider the available context/);
+    assert.match(systemInstruction, /Take extra care to consider the available context/);
+    assert.match(systemInstruction, /thorough, well-organized answer/);
     assert.match(systemInstruction, /Do not reveal private reasoning/);
   } finally {
     globalThis.fetch = oldFetch;
@@ -269,7 +301,7 @@ test("returns retry guidance when Gemini exceeds the request timeout", async () 
     const response = await POST(request("198.51.100.116"));
     const body = await response.json();
     assert.equal(response.status, 504);
-    assert.match(body.error, /within 60 seconds/);
+    assert.match(body.error, /within 120 seconds/);
     assert.match(body.error, /available to retry/);
   } finally {
     globalThis.fetch = oldFetch;

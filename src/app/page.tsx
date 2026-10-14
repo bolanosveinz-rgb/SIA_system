@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDownToLine, ArrowRight, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, HeartHandshake, MapPinned, MessageSquareText, ShieldCheck } from "lucide-react";
 import { CommunityChatbot } from "@/components/community-chatbot";
 import { NewsFeed } from "@/components/news-feed";
 
@@ -16,7 +16,7 @@ export default function HomePage() {
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#0d9b91]/20 bg-[var(--surface)]/75 px-3.5 py-2 text-xs font-semibold text-[#08776f] shadow-sm dark:text-[#70e3d6]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#0d9b91]" /> Your community, better connected</div>
           <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.12] tracking-[-.045em] sm:text-6xl">A better Tupi starts<br className="hidden sm:block" /> with <span className="bg-gradient-to-r from-[#0d9b91] to-[#3ab9a8] bg-clip-text text-transparent">being heard.</span></h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[var(--muted)] sm:text-lg">Ask a question, share a concern, and stay close to the things happening in your community.</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/map" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12365a] px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-[#0d2945] sm:w-auto"><MapPinned size={18} /> Report a community concern <ArrowRight size={16} /></Link><Link href="/my-reports" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-bold transition hover:border-[#0d9b91]/40 sm:w-auto">Track my report <ChevronRight size={16} /></Link><a href="https://drive.google.com/file/d/1UJJQLQUcQGEUAXHBWeYNO6XHoE44o5vB/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#0d9b91]/30 bg-[#0d9b91]/5 px-5 text-sm font-bold text-[#08776f] transition hover:-translate-y-0.5 hover:border-[#0d9b91]/50 hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] dark:text-[#70e3d6] sm:w-auto"><ArrowDownToLine size={18} /> Install app</a></div>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href="/map" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12365a] px-5 text-sm font-bold text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-[#0d2945] sm:w-auto"><MapPinned size={18} /> Report a community concern <ArrowRight size={16} /></Link><Link href="/my-reports" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-bold transition hover:border-[#0d9b91]/40 sm:w-auto">Track my report <ChevronRight size={16} /></Link></div>
         </div>
       </section>
       <section className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6">

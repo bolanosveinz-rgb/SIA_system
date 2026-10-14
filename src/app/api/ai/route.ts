@@ -3,7 +3,8 @@ import { z } from "zod";
 import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 
-const GEMINI_REQUEST_TIMEOUT_MS = 60_000;
+const MAX_CHAT_TEXT_LENGTH = 20_000;
+const GEMINI_REQUEST_TIMEOUT_MS = 120_000;
 
 const imageSchema = z.object({
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
@@ -11,7 +12,7 @@ const imageSchema = z.object({
 });
 const messageSchema = z.object({
   role: z.enum(["user", "model"]),
-  text: z.string().trim().min(1).max(1000),
+  text: z.string().trim().min(1).max(MAX_CHAT_TEXT_LENGTH),
   image: imageSchema.optional(),
 });
 const historySchema = z.array(messageSchema).max(12)
@@ -20,7 +21,7 @@ const historySchema = z.array(messageSchema).max(12)
   .refine((messages) => messages.every((message) => message.role === "user" || !message.image))
   .refine((messages) => messages.filter((message) => message.image).length <= 1);
 const questionSchema = z.object({
-  question: z.string().trim().max(1000).default(""),
+  question: z.string().trim().max(MAX_CHAT_TEXT_LENGTH).default(""),
   image: imageSchema.optional(),
   history: historySchema.optional(),
   thinkingMode: z.boolean().optional().default(false),
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
     const requestBody = JSON.stringify({
       systemInstruction: {
         parts: [{
-          text: `You are ServeLink, a helpful community information assistant for Tupi, South Cotabato, Philippines. Help residents understand how to use the platform and find municipal services. Be concise, kind, and clear. Never invent current LGU schedules, phone numbers, policies, or emergency details. If unsure, say to contact the Municipality of Tupi directly. For emergencies, tell the resident to contact local emergency services immediately.${parsed.data.thinkingMode ? " For this response, carefully consider the available context and give a well-checked, concise conclusion. Do not reveal private reasoning." : ""}`,
+          text: `You are ServeLink, a helpful assistant for residents of Tupi, South Cotabato. Answer general questions across topics to the best of your ability, and help with using ServeLink and finding municipal services. Be accurate, clear, and respectful. Never invent current LGU schedules, phone numbers, policies, or emergency details; when unsure about local or time-sensitive facts, say so and direct the resident to the Municipality of Tupi. For emergencies, tell the resident to contact local emergency services immediately.${parsed.data.thinkingMode ? " Take extra care to consider the available context and provide a thorough, well-organized answer with relevant details and practical next steps. Do not reveal private reasoning." : ""}`,
         }],
       },
       contents: [
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
           ],
         },
       ],
-      generationConfig: { maxOutputTokens: 500 },
+      generationConfig: { maxOutputTokens: 8192 },
     });
     const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
       method: "POST",
@@ -257,7 +258,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
     if (error instanceof Error && error.name === "TimeoutError") {
       return NextResponse.json(
-        { error: "Google Gemini did not respond within 60 seconds. Your message is still available to retry. Try again shortly; if it keeps timing out, use a shorter question or a smaller photo." },
+        { error: "Google Gemini did not respond within 120 seconds. Your message is still available to retry. Try again shortly; if it keeps timing out, use a shorter question or a smaller photo." },
         { status: 504 },
       );
     }

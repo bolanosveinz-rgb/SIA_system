@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "ServeLink — Tupi, South Cotabato", template: "%s | ServeLink" },
   description: "A better connection between the people of Tupi and their local government.",
-  icons: { icon: "/tupi_emblem_no_text.svg", apple: "/tupi_emblem_no_text.svg" },
+  icons: { icon: "/municipal_design_download.svg", apple: "/municipal_design_download.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

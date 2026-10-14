@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowDownToLine, Bell, CheckCheck, ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/components/ui";
@@ -174,9 +174,10 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
         <BrandLogo className="h-11 w-11 shrink-0 rounded-xl object-contain" />
         <span className="text-base font-extrabold tracking-tight">Serve<span className="text-[#0d9b91]">Link</span></span>
       </Link>
-      <div className="flex items-center gap-2">
-        <Link href="/login" className="inline-flex min-h-10 items-center rounded-xl px-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--background)]">Sign in</Link>
-        <Link href="/register" className="inline-flex min-h-10 items-center rounded-xl bg-[#12365a] px-3.5 text-sm font-semibold text-white transition hover:bg-[#0d2945] sm:px-4">Sign up</Link>
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {pathname === "/" && <a href="https://drive.google.com/file/d/1UJJQLQUcQGEUAXHBWeYNO6XHoE44o5vB/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-[#0d9b91]/30 bg-[#0d9b91]/5 px-2 text-xs font-bold text-[#08776f] transition hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] dark:text-[#70e3d6] sm:gap-1.5 sm:px-3 sm:text-sm"><ArrowDownToLine size={16} /><span>Install app</span></a>}
+        <Link href="/login" className="inline-flex min-h-10 items-center rounded-xl px-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--background)] sm:px-3 sm:text-sm">Sign in</Link>
+        <Link href="/register" className="inline-flex min-h-10 items-center rounded-xl bg-[#12365a] px-2.5 text-xs font-semibold text-white transition hover:bg-[#0d2945] sm:px-4 sm:text-sm">Sign up</Link>
       </div>
     </div> : <>
     <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6">
