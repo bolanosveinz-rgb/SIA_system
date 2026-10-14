@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Heart, Maximize, MessageCircle, Pause, Play, Send, Volume2, VolumeX, Image as ImageIcon } from "lucide-react";
+import { Heart, Maximize, MessageCircle, Pause, Play, Send, Volume2, VolumeX, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Input } from "@/components/ui";
 
@@ -142,13 +142,14 @@ function timeAgo(value: string) {
 
 function NewsDescription({ caption }: { caption: string }) {
   const [expanded, setExpanded] = useState(false);
-  const firstSentence = Array.from(new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(caption))[0]?.segment.trimEnd() ?? caption;
-  const canExpand = firstSentence.trimEnd().length < caption.trimEnd().length;
+  const words = caption.trim().split(/\s+/).filter(Boolean);
+  const canExpand = words.length > 6;
+  const preview = `${words.slice(0, 6).join(" ")}${canExpand ? "…" : ""}`;
 
   return <>
     <p
       className="whitespace-pre-wrap text-sm leading-6"
-    >{expanded ? caption : firstSentence}</p>
+    >{expanded ? caption : preview}</p>
     {canExpand && <button
       type="button"
       onClick={() => setExpanded((value) => !value)}
@@ -161,7 +162,6 @@ function NewsDescription({ caption }: { caption: string }) {
 export function NewsFeed() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [activePostIndex, setActivePostIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [viewerStatus, setViewerStatus] = useState<"loading" | "guest" | "resident" | "other" | "error">("loading");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -290,16 +290,9 @@ export function NewsFeed() {
   if (loading) return <div className="h-[32rem] animate-pulse rounded-2xl bg-[var(--line)]" />;
   if (!posts.length) return <Card className="px-6 py-14 text-center"><div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[#0d9b91]"><ImageIcon /></div><h3 className="font-bold">No announcements yet</h3><p className="mt-1 text-sm text-[var(--muted)]">Check back soon for updates from your LGU.</p></Card>;
 
-  const activePost = posts[Math.min(activePostIndex, posts.length - 1)];
+  const activePost = posts[0];
 
-  return <div className="space-y-4">
-    {posts.length > 1 && <div className="flex items-center justify-between">
-      <p aria-live="polite" className="text-xs font-semibold text-[var(--muted)]">Update {activePostIndex + 1} of {posts.length}</p>
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => setActivePostIndex((index) => (index - 1 + posts.length) % posts.length)} aria-label="Previous community news" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] transition hover:border-[#0d9b91]/40 hover:bg-[var(--accent-soft)]"><ChevronLeft size={20} /></button>
-        <button type="button" onClick={() => setActivePostIndex((index) => (index + 1) % posts.length)} aria-label="Next community news" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)] transition hover:border-[#0d9b91]/40 hover:bg-[var(--accent-soft)]"><ChevronRight size={20} /></button>
-      </div>
-    </div>}
+  return <div>
     <Card key={activePost.id} className="overflow-hidden">
       {activePost.media.length > 0 && <div className="space-y-1 bg-slate-100 dark:bg-slate-800">{activePost.media.map((media, index) => <div key={media.id} className="relative aspect-[16/9] max-h-[min(70vh,760px)]">{media.type === "VIDEO" ? <NewsVideo media={media} index={index} /> : <img src={media.url} alt={`Community announcement ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />}</div>)}</div>}
       <div className="p-5 sm:p-8">
