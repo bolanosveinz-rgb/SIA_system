@@ -10,11 +10,12 @@ function request(
   question = "How can I report a local concern?",
   history?: Array<{ role: "user" | "model"; text: string; image?: TestImage }>,
   image?: TestImage,
+  thinkingMode = false,
 ) {
   return new NextRequest("http://localhost:3000/api/ai", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": ip },
-    body: JSON.stringify({ question, ...(history ? { history } : {}), ...(image ? { image } : {}) }),
+    body: JSON.stringify({ question, ...(history ? { history } : {}), ...(image ? { image } : {}), thinkingMode }),
   });
 }
 
@@ -52,7 +53,7 @@ test("calls Google Gemini server-side with its API key in the header and returns
       parts: [{ text: "How can I report a local concern?" }],
     }]);
     assert.ok(captured.body.systemInstruction);
-    assert.deepEqual(captured.body.generationConfig, { maxOutputTokens: 8192 });
+    assert.deepEqual(captured.body.generationConfig, { maxOutputTokens: 1024 });
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -61,6 +62,31 @@ test("calls Google Gemini server-side with its API key in the header and returns
     else process.env.GEMINI_CHAT_MODEL = oldChatModel;
     if (oldModel === undefined) delete process.env.GEMINI_API_MODEL;
     else process.env.GEMINI_API_MODEL = oldModel;
+  }
+});
+
+test("allows a larger response budget in Think mode", async () => {
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  let generationConfig: unknown;
+  try {
+    process.env.GEMINI_API_KEY = "server-only-test-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite";
+    globalThis.fetch = async (_input, init) => {
+      generationConfig = (JSON.parse(String(init?.body)) as { generationConfig: unknown }).generationConfig;
+      return Response.json({ candidates: [{ content: { parts: [{ text: "A careful answer." }] } }] });
+    };
+
+    const response = await POST(request("198.51.100.119", "Explain this carefully.", undefined, undefined, true));
+    assert.equal(response.status, 200);
+    assert.deepEqual(generationConfig, { maxOutputTokens: 4096 });
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
   }
 });
 
@@ -301,7 +327,7 @@ test("returns retry guidance when Gemini exceeds the request timeout", async () 
     const response = await POST(request("198.51.100.116"));
     const body = await response.json();
     assert.equal(response.status, 504);
-    assert.match(body.error, /within 120 seconds/);
+    assert.match(body.error, /within 30 seconds/);
     assert.match(body.error, /available to retry/);
   } finally {
     globalThis.fetch = oldFetch;
@@ -635,7 +661,7 @@ test("discovers a generateContent model available to the Gemini key", async () =
   }
 });
 
-test("discovers and retries available models after Gemini server errors", async () => {
+test("does not wait on model discovery after Gemini server errors", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
@@ -647,32 +673,17 @@ test("discovers and retries available models after Gemini server errors", async 
     delete process.env.GEMINI_API_MODEL;
     globalThis.fetch = async (input) => {
       const url = String(input);
-      if (url.includes("/v1beta/models?")) {
-        return Response.json({
-          models: [
-            { name: "models/gemini-2.0-flash", supportedGenerationMethods: ["generateContent"] },
-            { name: "models/gemini-2.0-pro", supportedGenerationMethods: ["generateContent"] },
-          ],
-        });
-      }
-
       requestedModels.push(url);
-      if (requestedModels.length <= 2) {
-        return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
-      }
-      return Response.json({
-        candidates: [{ content: { parts: [{ text: "The alternate model is responding." }] } }],
-      });
+      return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
     };
 
     const response = await POST(request("198.51.100.112"));
     const body = await response.json();
-    assert.equal(response.status, 200);
-    assert.equal(body.answer, "The alternate model is responding.");
-    assert.equal(requestedModels.length, 3);
+    assert.equal(response.status, 503);
+    assert.match(body.error, /server error for the configured and fallback models/);
+    assert.equal(requestedModels.length, 2);
     assert.match(requestedModels[0], /models\/gemini-2\.5-flash:generateContent$/);
     assert.match(requestedModels[1], /models\/gemini-2\.5-flash-lite:generateContent$/);
-    assert.match(requestedModels[2], /models\/gemini-2\.0-flash:generateContent$/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -684,7 +695,7 @@ test("discovers and retries available models after Gemini server errors", async 
   }
 });
 
-test("reports persistent Gemini server failures without a generic assistant error", async () => {
+test("reports persistent Gemini server failures without slow discovery", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
@@ -693,20 +704,14 @@ test("reports persistent Gemini server failures without a generic assistant erro
     process.env.GEMINI_API_KEY = "server-only-test-key";
     process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
     delete process.env.GEMINI_API_MODEL;
-    globalThis.fetch = async (input) => {
-      if (String(input).includes("/v1beta/models?")) {
-        return Response.json({
-          models: [{ name: "models/gemini-2.0-flash", supportedGenerationMethods: ["generateContent"] }],
-        });
-      }
+    globalThis.fetch = async () => {
       return new Response(JSON.stringify({ error: { status: "INTERNAL" } }), { status: 500 });
     };
 
     const response = await POST(request("198.51.100.113"));
     const body = await response.json();
     assert.equal(response.status, 503);
-    assert.match(body.error, /Google Gemini is temporarily unavailable/);
-    assert.match(body.error, /no guaranteed recovery time/i);
+    assert.match(body.error, /server error for the configured and fallback models/);
     assert.doesNotMatch(body.error, /The assistant is temporarily unavailable/);
   } finally {
     globalThis.fetch = oldFetch;

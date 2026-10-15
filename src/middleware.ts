@@ -12,6 +12,7 @@ function loginRedirect(request: NextRequest, returnTo: string) {
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get(COOKIE)?.value;
   const route = request.nextUrl.pathname;
+  const homePage = route === "/";
   const adminPage = route.startsWith("/admin");
   const adminApi = route.startsWith("/api/admin");
   const residentPage = ["/map", "/my-reports", "/profile"].some((path) => route === path || route.startsWith(`${path}/`));
@@ -36,6 +37,7 @@ export async function middleware(request: NextRequest) {
     const { payload } = await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ["HS256"] });
     const isAdmin = payload.role === "ADMIN";
     const isResident = payload.role === "RESIDENT";
+    if (homePage && isAdmin) return NextResponse.redirect(new URL("/admin", request.url));
     if (aiApi && !isAdmin && !isResident) {
       return NextResponse.json({ error: "You do not have permission to use the community assistant." }, { status: 403 });
     }
@@ -60,12 +62,14 @@ export async function middleware(request: NextRequest) {
           ? NextResponse.json({ error: "Your session has expired. Please sign in again." }, { status: 401 })
           : residentPage
             ? loginRedirect(request, `${route}${request.nextUrl.search}`)
-            : NextResponse.redirect(new URL("/login", request.url));
+            : homePage
+              ? NextResponse.next()
+              : NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete(COOKIE);
     return response;
   }
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/ai", "/map/:path*", "/my-reports/:path*", "/profile/:path*", "/login", "/register", "/admin/login"],
+  matcher: ["/", "/admin/:path*", "/api/admin/:path*", "/api/ai", "/map/:path*", "/my-reports/:path*", "/profile/:path*", "/login", "/register", "/admin/login"],
 };

@@ -4,7 +4,7 @@ import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 
 const MAX_CHAT_TEXT_LENGTH = 20_000;
-const GEMINI_REQUEST_TIMEOUT_MS = 120_000;
+const GEMINI_REQUEST_TIMEOUT_MS = 30_000;
 
 const imageSchema = z.object({
   mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
           ],
         },
       ],
-      generationConfig: { maxOutputTokens: 8192 },
+      generationConfig: { maxOutputTokens: parsed.data.thinkingMode ? 4096 : 1024 },
     });
     const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
       method: "POST",
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
       response = await requestGemini(responseModel);
     }
-    if (isRetryableGeminiFailure(response)) {
+    if (isModelUnavailable(response)) {
       const discovered = await discoverGeminiModels(apiKey);
       if (discovered.authorizationFailed) {
         return NextResponse.json(
@@ -184,8 +184,8 @@ export async function POST(request: NextRequest) {
           { status: 502 },
         );
       }
-      for (const availableModel of discovered.models.slice(0, 2)) {
-        if (attemptedModels.has(availableModel)) continue;
+      const availableModels = discovered.models.filter((availableModel) => !attemptedModels.has(availableModel));
+      for (const availableModel of availableModels.slice(0, 1)) {
         attemptedModels.add(availableModel);
         console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
         responseModel = availableModel;
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status >= 500 || providerStatus === "INTERNAL" || providerStatus === "UNAVAILABLE") {
         return NextResponse.json(
-          { error: "Google Gemini is temporarily unavailable on the models enabled for this key. The assistant tried alternate models. There is no guaranteed recovery time; wait a few minutes and try again. If the problem continues, check Google AI Studio service status." },
+          { error: "Google Gemini returned a server error for the configured and fallback models. Check Google AI Studio service status and confirm GEMINI_API_KEY and GEMINI_CHAT_MODEL are valid for the deployed app, then try again." },
           { status: 503 },
         );
       }
@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
     if (error instanceof Error && error.name === "TimeoutError") {
       return NextResponse.json(
-        { error: "Google Gemini did not respond within 120 seconds. Your message is still available to retry. Try again shortly; if it keeps timing out, use a shorter question or a smaller photo." },
+        { error: "Google Gemini did not respond within 30 seconds. Your message is still available to retry. Try again shortly; if it keeps timing out, use a shorter question or a smaller photo." },
         { status: 504 },
       );
     }
