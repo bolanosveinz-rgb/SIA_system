@@ -40,13 +40,13 @@ export function databaseErrorResponse(error: unknown, operation: string) {
     }
     if (code === "P1013") {
       return NextResponse.json(
-        { error: "DATABASE_URL is not a valid MySQL connection URL. Check its format in the app environment." },
+        { error: "DATABASE_URL is not a valid PostgreSQL connection URL. Check its format in the app environment." },
         { status: 503 },
       );
     }
     if (code === "P1001" || code === "P1002" || code === "P1017") {
       return NextResponse.json(
-        { error: "The app could not reach the database. Check the Railway public connection details and DATABASE_URL configured for the running app." },
+        { error: "The app could not reach the database. Check the Supabase connection details and DATABASE_URL configured for the running app." },
         { status: 503 },
       );
     }

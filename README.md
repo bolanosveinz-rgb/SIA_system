@@ -1,6 +1,6 @@
 # ServeLink
 
-ServeLink is a community reporting and information platform connecting residents of Tupi, South Cotabato with their Local Government Unit. It is built with Next.js App Router, TypeScript, Tailwind CSS, Prisma/MySQL, Leaflet/OpenStreetMap, Cloudinary, and the Google Gemini API.
+ServeLink is a community reporting and information platform connecting residents of Tupi, South Cotabato with their Local Government Unit. It is built with Next.js App Router, TypeScript, Tailwind CSS, Prisma/PostgreSQL (Supabase), Leaflet/OpenStreetMap, Cloudinary, and the Google Gemini API.
 
 ## What is included
 
@@ -14,13 +14,13 @@ ServeLink is a community reporting and information platform connecting residents
 - Administrator sign-in uses a responsive split-panel layout with LGU access guidance.
 - Interactive Tupi boundary map, report pins, report-density heat layer, reverse geocoding, signed Cloudinary uploads, and resident report/status tracking in the signed-in resident portal.
 - LGU dashboard, live report notifications using database-backed notification records and short polling, reports with filters/status/remarks, resident directory, news moderation/CRUD, and editable administrator profile/password.
-- MySQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
+- PostgreSQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
 
 ## Project structure
 
 ```text
 prisma/
-  migrations/                 MySQL migration history
+  migrations/                 PostgreSQL migration history
   schema.prisma               Data models, relations, roles and indexes
   seed.ts                     Admin account and local demo data
 src/
@@ -39,7 +39,7 @@ render.yaml                   Render blueprint
 ## Requirements
 
 - Node.js 22 LTS and npm.
-- A MySQL 8-compatible database (Railway MySQL is supported).
+- A Supabase PostgreSQL database.
 - Cloudinary credentials for media uploads.
 - A Google Gemini API key for AI answers. The rest of the application runs without this key; the assistant reports that it is unconfigured.
 
@@ -59,16 +59,17 @@ render.yaml                   Render blueprint
    Copy-Item .env.example .env
    ```
 
-3. Create a MySQL database and update `.env`:
+3. Create a Supabase project. In the Supabase dashboard, open **Connect** and choose the shared pooler connection details. Set both connection URLs in `.env`:
 
    ```dotenv
-   DATABASE_URL="mysql://USER:PASSWORD@HOST:PORT/servelink"
+   DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DATABASE_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DATABASE_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
    JWT_SECRET="use-a-unique-random-secret-at-least-32-characters-long"
    ADMIN_EMAIL="admin@tupi.gov.ph"
    ADMIN_PASSWORD="use-a-unique-long-password"
    ```
 
-   Use a URL-encoded password if it contains reserved URL characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
+   `DATABASE_URL` uses the transaction-mode pooler on port `6543` for app queries and seeding. `DIRECT_URL` uses the session-mode pooler on port `5432` for Prisma migrations. Replace the project reference and password with values from Supabase; URL-encode reserved password characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
 
 4. Apply the checked-in migration, generate the Prisma client, and seed:
 
@@ -88,15 +89,16 @@ render.yaml                   Render blueprint
 
    Open <http://localhost:3000>. Resident registration is public; administrator credentials come from the seed environment variables. Do not use the sample administrator values in production.
 
-6. If sign-up reports a database configuration/schema issue, open `/api/health` on the same app origin. A healthy response is `{"status":"ok","database":"ready"}`. For a missing or outdated schema, set `DATABASE_URL` in the environment of the app actually serving the registration page, then run `npm run db:deploy` from a trusted shell with that same URL and restart/redeploy the app. Merely adding the public database URL to Railway does not automatically configure a separate local or Render application.
+6. If sign-up reports a database configuration/schema issue, open `/api/health` on the same app origin. A healthy response is `{"status":"ok","database":"ready"}`. For a missing or outdated schema, set `DATABASE_URL` and `DIRECT_URL` in the environment of the app actually serving the registration page, then run `npm run db:deploy` and restart/redeploy the app.
 
-## Railway MySQL
+## Supabase PostgreSQL
 
-1. Create a Railway project and add a MySQL service.
-2. In the MySQL service, copy its connection URL. For a local application use the Railway-provided public TCP proxy URL; a private Railway hostname is not reachable from a developer machine or Render.
-3. Put that URL in `DATABASE_URL`. URL-encode special characters in credentials.
-4. Run `npm run db:deploy` from this project to apply `prisma/migrations/`.
-5. Back up production databases and use `npm run db:deploy` for deployed migrations. Use `npm run db:migrate -- --name describe_change` only when creating a new migration during development.
+1. Create a Supabase project and copy its shared pooler URLs from **Connect**. Configure the transaction pooler URL as `DATABASE_URL` and the session pooler URL as `DIRECT_URL`.
+2. Run `npm run db:deploy` from this project. This applies the checked-in PostgreSQL migration and creates all ServeLink tables, enum types, indexes, and foreign keys in the Supabase `public` schema. Row-level security is enabled on app tables so they aren't exposed to Supabase's public API roles; the app connects server-side using the database owner credentials.
+3. Run `npm run db:generate` and `npm run db:seed`. The seed requires `ADMIN_PASSWORD`; in production it creates only the administrator.
+4. For schema changes, back up production data and use `npm run db:migrate -- --name describe_change` only in development. Deploy committed migrations using `npm run db:deploy`.
+
+This PostgreSQL migration replaces the former MySQL migration history. It is intended for a new Supabase database; migrating existing MySQL data requires a separate data export/import and is not performed by Prisma migrations.
 
 ## Cloudinary
 
@@ -130,13 +132,13 @@ git push -u origin feat/report-status-notifications
 The repository includes [`render.yaml`](./render.yaml) for a single-instance Node web service. One instance keeps the in-memory abuse limits consistent; move rate limiting to a shared store before horizontal scaling.
 
 1. Push the project to GitHub and create a new Render Blueprint from the repository.
-2. Create a Railway MySQL database and use its **public TCP proxy** connection URL for Render's `DATABASE_URL` (Render cannot reach Railway private networking).
+2. Set `DATABASE_URL` and `DIRECT_URL` to the Supabase pooler URLs described above.
 3. Supply the Cloudinary and Google Gemini values when Render prompts for the `sync: false` variables. `JWT_SECRET` is generated by the blueprint; keep it stable across deploys or existing sessions will be invalidated.
 4. Deploy. The build runs `prisma migrate deploy` before `next build`; `/api/health` checks the database connection.
 5. In the Render service shell, with `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, and `ADMIN_PHONE` configured, run `npm run db:seed`. In production this creates only the administrator account/profile—no demo resident or sample report.
 6. Confirm the `/admin/login` page, map tiles, AI configuration, and Cloudinary uploads. Set `NEXT_PUBLIC_APP_URL` to the deployed HTTPS origin.
 
-Do not expose database, JWT, Google Gemini, or Cloudinary secrets as `NEXT_PUBLIC_*` variables. Prefer a Railway public endpoint restricted to required sources where available, enable TLS when supported, and use a unique database password.
+Do not expose database, JWT, Google Gemini, or Cloudinary secrets as `NEXT_PUBLIC_*` variables. Use a unique database password and rotate it immediately if it is exposed.
 
 ## Map boundary and attribution
 
@@ -191,4 +193,4 @@ LGU flow:
 - Run migrations as part of deployment; never edit an already-applied migration. Add a new migration for each schema change.
 - The rate limiter is process-local and intentionally paired with the single Render instance in `render.yaml`. Use a shared Redis/database-backed limiter before enabling multiple instances.
 - Community map markers shown to residents contain only report title, location, status, and time; reporter identity/contact details are restricted to the LGU.
-- Monitor Render and Railway logs, keep database backups, and rotate admin/API/database secrets on staff or credential changes.
+- Monitor Render and Supabase logs, keep database backups, and rotate admin/API/database secrets on staff or credential changes.
