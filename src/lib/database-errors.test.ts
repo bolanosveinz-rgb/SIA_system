@@ -31,7 +31,7 @@ test("rejects MySQL configuration without exposing connection details", () => {
 
 test("requires both Supabase PostgreSQL URLs", () => {
   assert.match(
-    databaseConfigurationError("postgresql://user:secret@pooler.example:6543/postgres?pgbouncer=true", undefined) ?? "",
+    databaseConfigurationError("postgresql://user:secret@pooler.example:6543/postgres?pgbouncer=true", "") ?? "",
     /DIRECT_URL is not configured/,
   );
 });

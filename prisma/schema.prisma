@@ -11,6 +11,8 @@ datasource db {
 enum Role {
   RESIDENT
   ADMIN
+
+  @@map("UserRole")
 }
 
 enum ReportStatus {
@@ -22,6 +24,8 @@ enum ReportStatus {
 enum MediaType {
   IMAGE
   VIDEO
+
+  @@map("NewsMediaType")
 }
 
 enum NotificationType {

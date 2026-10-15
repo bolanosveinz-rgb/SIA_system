@@ -1,11 +1,11 @@
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('RESIDENT', 'ADMIN');
+CREATE TYPE "UserRole" AS ENUM ('RESIDENT', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'RESOLVED');
 
 -- CreateEnum
-CREATE TYPE "MediaType" AS ENUM ('IMAGE', 'VIDEO');
+CREATE TYPE "NewsMediaType" AS ENUM ('IMAGE', 'VIDEO');
 
 -- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('NEW_REPORT', 'REPORT_UPDATED', 'ANNOUNCEMENT');
@@ -16,7 +16,7 @@ CREATE TABLE "User" (
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'RESIDENT',
+    "role" "UserRole" NOT NULL DEFAULT 'RESIDENT',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -72,7 +72,7 @@ CREATE TABLE "NewsMedia" (
     "newsId" TEXT NOT NULL,
     "url" VARCHAR(2048) NOT NULL,
     "publicId" VARCHAR(255) NOT NULL,
-    "type" "MediaType" NOT NULL,
+    "type" "NewsMediaType" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "NewsMedia_pkey" PRIMARY KEY ("id")
