@@ -225,3 +225,35 @@ ALTER TABLE "Like" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Comment" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Report" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'User',
+    'ResidentProfile',
+    'AdminProfile',
+    'News',
+    'NewsMedia',
+    'Like',
+    'Comment',
+    'Report',
+    'Notification'
+  ]
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename = table_name
+        AND policyname = 'deny_client_access'
+    ) THEN
+      EXECUTE format(
+        'CREATE POLICY deny_client_access ON public.%I AS RESTRICTIVE FOR ALL TO anon, authenticated USING (false) WITH CHECK (false)',
+        table_name
+      );
+    END IF;
+  END LOOP;
+END
+$$;
