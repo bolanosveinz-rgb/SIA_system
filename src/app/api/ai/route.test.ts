@@ -661,29 +661,43 @@ test("discovers a generateContent model available to the Gemini key", async () =
   }
 });
 
-test("does not wait on model discovery after Gemini server errors", async () => {
+test("tries one key-enabled text model after configured models return server errors", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
   const oldFetch = globalThis.fetch;
   const requestedModels: string[] = [];
+  let discoveryCount = 0;
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
     process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
     delete process.env.GEMINI_API_MODEL;
     globalThis.fetch = async (input) => {
       const url = String(input);
+      if (url.includes("/v1beta/models?")) {
+        discoveryCount += 1;
+        return Response.json({
+          models: [{ name: "models/gemini-3.0-flash-preview", supportedGenerationMethods: ["generateContent"] }],
+        });
+      }
       requestedModels.push(url);
+      if (requestedModels.length === 3) {
+        return Response.json({
+          candidates: [{ content: { parts: [{ text: "Answered using a model enabled for this key." }] } }],
+        });
+      }
       return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
     };
 
     const response = await POST(request("198.51.100.112"));
     const body = await response.json();
-    assert.equal(response.status, 503);
-    assert.match(body.error, /server error for the configured and fallback models/);
-    assert.equal(requestedModels.length, 2);
+    assert.equal(response.status, 200);
+    assert.equal(body.answer, "Answered using a model enabled for this key.");
+    assert.equal(requestedModels.length, 3);
+    assert.equal(discoveryCount, 1);
     assert.match(requestedModels[0], /models\/gemini-2\.5-flash:generateContent$/);
     assert.match(requestedModels[1], /models\/gemini-2\.5-flash-lite:generateContent$/);
+    assert.match(requestedModels[2], /models\/gemini-3\.0-flash-preview:generateContent$/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -695,7 +709,7 @@ test("does not wait on model discovery after Gemini server errors", async () => 
   }
 });
 
-test("reports persistent Gemini server failures without slow discovery", async () => {
+test("reports persistent Gemini server failures after model discovery is exhausted", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
@@ -711,7 +725,7 @@ test("reports persistent Gemini server failures without slow discovery", async (
     const response = await POST(request("198.51.100.113"));
     const body = await response.json();
     assert.equal(response.status, 503);
-    assert.match(body.error, /server error for the configured and fallback models/);
+    assert.match(body.error, /server errors for the configured models and another text model/);
     assert.doesNotMatch(body.error, /The assistant is temporarily unavailable/);
   } finally {
     globalThis.fetch = oldFetch;

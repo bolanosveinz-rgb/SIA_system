@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
       response = await requestGemini(responseModel);
     }
-    if (isModelUnavailable(response)) {
+    if (isModelUnavailable(response) || response.status >= 500) {
       const discovered = await discoverGeminiModels(apiKey);
       if (discovered.authorizationFailed) {
         return NextResponse.json(
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       }
       if (response.status >= 500 || providerStatus === "INTERNAL" || providerStatus === "UNAVAILABLE") {
         return NextResponse.json(
-          { error: "Google Gemini returned a server error for the configured and fallback models. Check Google AI Studio service status and confirm GEMINI_API_KEY and GEMINI_CHAT_MODEL are valid for the deployed app, then try again." },
+          { error: "Google Gemini returned server errors for the configured models and another text model available to this API key. Check Google AI Studio service status and the key's project/model access, then try again." },
           { status: 503 },
         );
       }
