@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientAddress } from "@/lib/rate-limit";
 import { isSameOrigin } from "@/lib/auth";
 import { registerSchema } from "@/lib/validation";
-import { databaseErrorResponse } from "@/lib/database-errors";
+import { databaseConfigurationError, databaseErrorResponse } from "@/lib/database-errors";
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
       { error: "Account registration is not configured correctly. Set a JWT_SECRET of at least 32 characters in the app environment, then restart the app." },
       { status: 503 },
     );
+  }
+  const databaseConfiguration = databaseConfigurationError();
+  if (databaseConfiguration) {
+    console.error("Resident registration unavailable:", databaseConfiguration);
+    return NextResponse.json({ error: databaseConfiguration }, { status: 503 });
   }
 
   try {

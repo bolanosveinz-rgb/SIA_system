@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { databaseErrorResponse } from "@/lib/database-errors";
+import { databaseConfigurationError, databaseErrorResponse } from "@/lib/database-errors";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const missing = [
-    !process.env.DATABASE_URL && "DATABASE_URL",
-    !process.env.JWT_SECRET && "JWT_SECRET",
-  ].filter((value): value is string => Boolean(value));
+  const missing = [!process.env.JWT_SECRET && "JWT_SECRET"].filter((value): value is string => Boolean(value));
   if (missing.length > 0) {
     return NextResponse.json({ status: "misconfigured", missing }, { status: 503 });
+  }
+  const databaseConfiguration = databaseConfigurationError();
+  if (databaseConfiguration) {
+    return NextResponse.json({ status: "misconfigured", error: databaseConfiguration }, { status: 503 });
   }
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     return NextResponse.json({ status: "misconfigured", invalid: ["JWT_SECRET"] }, { status: 503 });

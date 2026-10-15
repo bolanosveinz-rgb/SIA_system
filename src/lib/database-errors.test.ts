@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Prisma } from "@prisma/client";
-import { databaseErrorResponse } from "@/lib/database-errors";
+import { databaseConfigurationError, databaseErrorResponse } from "@/lib/database-errors";
 
 function prismaError(code: string, target?: string[]) {
   return new Prisma.PrismaClientKnownRequestError("Database request failed", {
@@ -15,7 +15,35 @@ test("explains that database tables need a migration without exposing SQL detail
   const response = databaseErrorResponse(prismaError("P2021"), "Test");
   assert.ok(response);
   assert.equal(response.status, 503);
-  assert.match((await response.json()).error, /npm run db:deploy/);
+  const body = await response.json();
+  assert.match(body.error, /npm run db:deploy/);
+  assert.match(body.error, /storage\.objects are unrelated/);
+});
+
+test("rejects MySQL configuration without exposing connection details", () => {
+  const error = databaseConfigurationError(
+    "mysql://private-user:private-password@private-host:3306/app",
+    "postgresql://user:secret@pooler.example:5432/postgres",
+  );
+  assert.match(error ?? "", /must use a PostgreSQL URL/);
+  assert.doesNotMatch(error ?? "", /private-user|private-password|private-host/);
+});
+
+test("requires both Supabase PostgreSQL URLs", () => {
+  assert.match(
+    databaseConfigurationError("postgresql://user:secret@pooler.example:6543/postgres?pgbouncer=true", undefined) ?? "",
+    /DIRECT_URL is not configured/,
+  );
+});
+
+test("accepts configured PostgreSQL URLs", () => {
+  assert.equal(
+    databaseConfigurationError(
+      "postgresql://user:secret@pooler.example:6543/postgres?pgbouncer=true",
+      "postgresql://user:secret@pooler.example:5432/postgres",
+    ),
+    null,
+  );
 });
 
 test("maps duplicate resident phone numbers to a friendly conflict", async () => {
