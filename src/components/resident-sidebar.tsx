@@ -49,9 +49,11 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("servelink:profile-updated", onProfileUpdated);
   }, []);
 
-  useEffect(() => setMobileNav(false), [pathname]);
-
   function toggleSidebar() {
+    if (mobileNav) {
+      setMobileNav(false);
+      return;
+    }
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem("servelink-resident-sidebar-collapsed", String(next));
@@ -85,8 +87,8 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
         <BrandLogo className={cn("shrink-0 rounded-xl object-contain", compactSidebar ? "h-9 w-9" : "h-12 w-12")} />
         {!compactSidebar && <span className="min-w-0"><span className="block font-extrabold">Serve<span className="text-[#0d9b91]">Link</span></span><span className="text-[10px] font-semibold uppercase tracking-[.13em] text-[var(--muted)]">Tupi community</span></span>}
       </Link>
-      <button type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expand resident sidebar" : "Collapse resident sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("hidden shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--background)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91] lg:flex", compactSidebar ? "h-7 w-7" : "h-9 w-9")}>
-        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      <button type="button" onClick={toggleSidebar} aria-label={mobileNav || !collapsed ? "Collapse resident sidebar" : "Expand resident sidebar"} aria-expanded={mobileNav || !collapsed} title={mobileNav ? "Close sidebar" : collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("flex shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors duration-200 ease-out hover:bg-[var(--background)] hover:text-[#08776f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9b91]", compactSidebar ? "h-7 w-7" : "h-9 w-9")}>
+        {collapsed && !mobileNav ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
     </div>
     <div className={cn("pt-6", compactSidebar ? "px-2" : "px-4")}>
@@ -94,7 +96,7 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
       <nav aria-label="Resident navigation" className="mt-2 space-y-1">
         {navigation.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === href : pathname.startsWith(href);
-          return <Link key={href} href={href} onClick={() => setMobileNav(false)} aria-label={compactSidebar ? label : undefined} title={compactSidebar ? label : undefined} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center rounded-xl text-sm font-semibold transition", compactSidebar ? "justify-center px-0" : "gap-3 px-3", active ? "bg-[var(--accent-soft)] text-[#08776f] dark:text-[#70e3d6]" : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]")}><Icon size={18} />{!compactSidebar && label}</Link>;
+          return <Link key={href} href={href} aria-label={compactSidebar ? label : undefined} title={compactSidebar ? label : undefined} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center rounded-xl text-sm font-semibold transition-colors duration-200 ease-out", compactSidebar ? "justify-center px-0" : "gap-3 px-3", active ? "bg-[var(--accent-soft)] text-[#08776f] dark:text-[#70e3d6]" : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]")}><Icon size={18} />{!compactSidebar && label}</Link>;
         })}
       </nav>
     </div>
@@ -104,7 +106,7 @@ export function ResidentSidebar({ children }: { children: React.ReactNode }) {
           {user.profile?.profilePhotoUrl ? <img src={user.profile.profilePhotoUrl} alt={`${user.name}'s profile`} className="h-9 w-9 rounded-full object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[#08776f]">{user.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span>}
           {!compactSidebar && <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{user.name}</span><span className="block truncate text-[10px] text-[var(--muted)]">{user.email}</span></span>}
         </div>
-        <button onClick={() => void logout()} aria-label={compactSidebar ? "Sign out" : undefined} title={compactSidebar ? "Sign out" : undefined} className={cn("flex min-h-9 w-full items-center rounded-lg text-xs font-semibold text-[var(--muted)] hover:bg-[var(--surface)] hover:text-rose-600", compactSidebar ? "justify-center" : "mt-3 gap-2 px-2")}><LogOut size={15} />{!compactSidebar && "Sign out"}</button>
+        <button onClick={() => void logout()} aria-label={compactSidebar ? "Sign out" : undefined} title={compactSidebar ? "Sign out" : undefined} className={cn("flex min-h-9 w-full items-center rounded-lg text-xs font-semibold text-[var(--muted)] transition-colors duration-200 ease-out hover:bg-[var(--surface)] hover:text-rose-600", compactSidebar ? "justify-center" : "mt-3 gap-2 px-2")}><LogOut size={15} />{!compactSidebar && "Sign out"}</button>
       </div>}
     </div>
   </div>;
