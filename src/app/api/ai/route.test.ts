@@ -52,7 +52,7 @@ test("calls Google Gemini server-side with its API key in the header and returns
       role: "user",
       parts: [{ text: "How can I report a local concern?" }],
     }]);
-    assert.ok(captured.body.systemInstruction);
+    assert.match(JSON.stringify(captured.body.systemInstruction), /any topic, country, or culture worldwide/i);
     assert.deepEqual(captured.body.generationConfig, { maxOutputTokens: 1024 });
   } finally {
     globalThis.fetch = oldFetch;
@@ -127,7 +127,7 @@ test("accepts prompts longer than 20,000 characters", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldFetch = globalThis.fetch;
-  const question = `Please explain this in detail. ${"Tell me more about the community services. ".repeat(800)}`.trim();
+  const question = `Please explain this in detail. ${"Tell me more about the community services. ".repeat(5000)}`.trim();
   let sentQuestion = "";
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
