@@ -123,11 +123,11 @@ test("does not enforce an application question-count limit", async () => {
   }
 });
 
-test("accepts a detailed question longer than the former 1000-character limit", async () => {
+test("accepts prompts longer than 20,000 characters", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldFetch = globalThis.fetch;
-  const question = `Please explain this in detail. ${"Tell me more about the community services. ".repeat(80)}`.trim();
+  const question = `Please explain this in detail. ${"Tell me more about the community services. ".repeat(800)}`.trim();
   let sentQuestion = "";
   try {
     process.env.GEMINI_API_KEY = "server-only-test-key";
@@ -143,7 +143,7 @@ test("accepts a detailed question longer than the former 1000-character limit", 
     const response = await POST(request("198.51.100.117", question));
     assert.equal(response.status, 200);
     assert.equal(sentQuestion, question);
-    assert.ok(question.length > 1000);
+    assert.ok(question.length > 200_000);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;

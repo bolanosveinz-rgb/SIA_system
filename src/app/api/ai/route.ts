@@ -3,7 +3,6 @@ import { z } from "zod";
 import { isSameOrigin } from "@/lib/auth";
 import { routeError, validationError } from "@/lib/http";
 
-const MAX_CHAT_TEXT_LENGTH = 20_000;
 const GEMINI_REQUEST_TIMEOUT_MS = 30_000;
 
 const imageSchema = z.object({
@@ -12,7 +11,7 @@ const imageSchema = z.object({
 });
 const messageSchema = z.object({
   role: z.enum(["user", "model"]),
-  text: z.string().trim().min(1).max(MAX_CHAT_TEXT_LENGTH),
+  text: z.string().trim().min(1),
   image: imageSchema.optional(),
 });
 const historySchema = z.array(messageSchema).max(12)
@@ -21,7 +20,7 @@ const historySchema = z.array(messageSchema).max(12)
   .refine((messages) => messages.every((message) => message.role === "user" || !message.image))
   .refine((messages) => messages.filter((message) => message.image).length <= 1);
 const questionSchema = z.object({
-  question: z.string().trim().max(MAX_CHAT_TEXT_LENGTH).default(""),
+  question: z.string().trim().default(""),
   image: imageSchema.optional(),
   history: historySchema.optional(),
   thinkingMode: z.boolean().optional().default(false),
