@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         );
       }
       const availableModels = discovered.models.filter((availableModel) => !attemptedModels.has(availableModel));
-      for (const availableModel of availableModels.slice(0, 1)) {
+      for (const availableModel of availableModels.slice(0, 3)) {
         attemptedModels.add(availableModel);
         console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
         responseModel = availableModel;

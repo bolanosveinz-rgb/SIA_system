@@ -661,7 +661,7 @@ test("discovers a generateContent model available to the Gemini key", async () =
   }
 });
 
-test("tries one key-enabled text model after configured models return server errors", async () => {
+test("tries key-enabled text models until one succeeds after configured models return server errors", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
   const oldModel = process.env.GEMINI_API_MODEL;
@@ -677,13 +677,16 @@ test("tries one key-enabled text model after configured models return server err
       if (url.includes("/v1beta/models?")) {
         discoveryCount += 1;
         return Response.json({
-          models: [{ name: "models/gemini-3.0-flash-preview", supportedGenerationMethods: ["generateContent"] }],
+          models: [
+            { name: "models/gemini-3.0-flash-preview", supportedGenerationMethods: ["generateContent"] },
+            { name: "models/gemini-2.0-flash-001", supportedGenerationMethods: ["generateContent"] },
+          ],
         });
       }
       requestedModels.push(url);
-      if (requestedModels.length === 3) {
+      if (requestedModels.length === 4) {
         return Response.json({
-          candidates: [{ content: { parts: [{ text: "Answered using a model enabled for this key." }] } }],
+          candidates: [{ content: { parts: [{ text: "Answered using the next available model." }] } }],
         });
       }
       return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
@@ -692,12 +695,13 @@ test("tries one key-enabled text model after configured models return server err
     const response = await POST(request("198.51.100.112"));
     const body = await response.json();
     assert.equal(response.status, 200);
-    assert.equal(body.answer, "Answered using a model enabled for this key.");
-    assert.equal(requestedModels.length, 3);
+    assert.equal(body.answer, "Answered using the next available model.");
+    assert.equal(requestedModels.length, 4);
     assert.equal(discoveryCount, 1);
     assert.match(requestedModels[0], /models\/gemini-2\.5-flash:generateContent$/);
     assert.match(requestedModels[1], /models\/gemini-2\.5-flash-lite:generateContent$/);
     assert.match(requestedModels[2], /models\/gemini-3\.0-flash-preview:generateContent$/);
+    assert.match(requestedModels[3], /models\/gemini-2\.0-flash-001:generateContent$/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
