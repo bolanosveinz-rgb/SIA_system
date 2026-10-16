@@ -65,6 +65,46 @@ test("calls Google Gemini server-side with its API key in the header and returns
   }
 });
 
+test("rotates through five configured Gemini API keys when earlier keys are quota-limited", async () => {
+  const oldKeys = process.env.GEMINI_API_KEYS;
+  const oldKey = process.env.GEMINI_API_KEY;
+  const oldChatModel = process.env.GEMINI_CHAT_MODEL;
+  const oldFetch = globalThis.fetch;
+  const requestedKeys: Array<string | null> = [];
+  try {
+    process.env.GEMINI_API_KEYS = "key-one,key-two,key-three,key-four,key-five";
+    delete process.env.GEMINI_API_KEY;
+    process.env.GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+    globalThis.fetch = async (_input, init) => {
+      const key = new Headers(init?.headers).get("x-goog-api-key");
+      requestedKeys.push(key);
+      if (key === "key-five") {
+        return Response.json({ candidates: [{ content: { parts: [{ text: "Answered with the fifth key." }] } }] });
+      }
+      return new Response(JSON.stringify({ error: { status: "RESOURCE_EXHAUSTED" } }), { status: 429 });
+    };
+
+    const response = await POST(request("198.51.100.115"));
+    const result = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(result.answer, "Answered with the fifth key.");
+    assert.equal(requestedKeys.length, 9);
+    assert.deepEqual(requestedKeys.slice(0, 2), ["key-one", "key-one"]);
+    assert.deepEqual(requestedKeys.slice(2, 4), ["key-two", "key-two"]);
+    assert.ok(requestedKeys.slice(0, 8).every((key) => key !== "key-five"));
+    assert.equal(requestedKeys[8], "key-five");
+    assert.doesNotMatch(JSON.stringify(result), /key-five/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKeys === undefined) delete process.env.GEMINI_API_KEYS;
+    else process.env.GEMINI_API_KEYS = oldKeys;
+    if (oldKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = oldKey;
+    if (oldChatModel === undefined) delete process.env.GEMINI_CHAT_MODEL;
+    else process.env.GEMINI_CHAT_MODEL = oldChatModel;
+  }
+});
+
 test("allows a larger response budget in Think mode", async () => {
   const oldKey = process.env.GEMINI_API_KEY;
   const oldChatModel = process.env.GEMINI_CHAT_MODEL;
@@ -459,7 +499,7 @@ test("turns Gemini invalid-key errors into a safe and actionable response", asyn
     const response = await POST(request("198.51.100.104"));
     const body = await response.json();
     assert.equal(response.status, 502);
-    assert.match(body.error, /Google Gemini rejected this API key/);
+    assert.match(body.error, /Google Gemini rejected all tried API keys/);
     assert.doesNotMatch(body.error, /Sensitive provider error details/);
   } finally {
     globalThis.fetch = oldFetch;

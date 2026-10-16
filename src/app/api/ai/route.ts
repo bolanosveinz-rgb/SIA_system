@@ -116,10 +116,11 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = questionSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const configuredApiKeys = process.env.GEMINI_API_KEYS?.trim() || process.env.GEMINI_API_KEY || "";
+    const apiKeys = [...new Set(configuredApiKeys.split(/[\r\n,]/).map((apiKey) => apiKey.trim()).filter(Boolean))];
+    if (apiKeys.length === 0) {
       return NextResponse.json(
-        { error: "The community assistant is not configured yet. Set GEMINI_API_KEY in the app environment and restart the app." },
+        { error: "The community assistant is not configured yet. Set GEMINI_API_KEYS or GEMINI_API_KEY in the app environment and restart the app." },
         { status: 503 },
       );
     }
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
       ],
       generationConfig: { maxOutputTokens: parsed.data.thinkingMode ? 4096 : 1024 },
     });
-    const requestGemini = (modelId: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
+    const requestGemini = (modelId: string, apiKey: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -164,34 +165,46 @@ export async function POST(request: NextRequest) {
       body: requestBody,
       signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     });
-    let response = await requestGemini(model);
+    let response: Response | undefined;
     let responseModel = model;
     const alternateModel = model === "gemini-2.5-flash-lite" ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
-    const attemptedModels = new Set([model]);
-    if (isRetryableGeminiFailure(response)) {
-      const reason = isQuotaLimited(response) ? "quota reached" : isModelUnavailable(response) ? "model unavailable" : "provider error";
-      responseModel = alternateModel;
-      attemptedModels.add(responseModel);
-      console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
-      response = await requestGemini(responseModel);
-    }
-    if (isModelUnavailable(response) || response.status >= 500) {
-      const discovered = await discoverGeminiModels(apiKey);
-      if (discovered.authorizationFailed) {
-        return NextResponse.json(
-          { error: "Google Gemini rejected this API key while checking available models. Verify GEMINI_API_KEY and enable Gemini API access for the key." },
-          { status: 502 },
-        );
+    for (const [keyIndex, apiKey] of apiKeys.entries()) {
+      responseModel = model;
+      response = await requestGemini(model, apiKey);
+      const attemptedModels = new Set([model]);
+      if (isRetryableGeminiFailure(response)) {
+        const reason = isQuotaLimited(response) ? "quota reached" : isModelUnavailable(response) ? "model unavailable" : "provider error";
+        responseModel = alternateModel;
+        attemptedModels.add(responseModel);
+        console.warn(`Gemini ${reason}; retrying with the alternate text model.`, { model, fallbackModel: responseModel });
+        response = await requestGemini(responseModel, apiKey);
       }
-      const availableModels = discovered.models.filter((availableModel) => !attemptedModels.has(availableModel));
-      for (const availableModel of availableModels.slice(0, 3)) {
-        attemptedModels.add(availableModel);
-        console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
-        responseModel = availableModel;
-        response = await requestGemini(responseModel);
-        if (!isRetryableGeminiFailure(response)) break;
+      if (isModelUnavailable(response) || response.status >= 500) {
+        const discovered = await discoverGeminiModels(apiKey);
+        if (discovered.authorizationFailed) {
+          response = new Response(JSON.stringify({ error: { status: "PERMISSION_DENIED" } }), { status: 403 });
+        } else {
+          const availableModels = discovered.models.filter((availableModel) => !attemptedModels.has(availableModel));
+          for (const availableModel of availableModels.slice(0, 3)) {
+            attemptedModels.add(availableModel);
+            console.info("Trying an available Gemini model discovered for this API key.", { model: availableModel });
+            responseModel = availableModel;
+            response = await requestGemini(responseModel, apiKey);
+            if (!isRetryableGeminiFailure(response)) break;
+          }
+        }
       }
+      if (response.ok) break;
+      if (keyIndex < apiKeys.length - 1 && (response.status === 401 || response.status === 403 || isRetryableGeminiFailure(response))) {
+        console.warn("Gemini request failed; trying the next configured API key.", {
+          status: response.status,
+          remainingKeys: apiKeys.length - keyIndex - 1,
+        });
+        continue;
+      }
+      break;
     }
+    if (!response) return NextResponse.json({ error: "Google Gemini could not complete the request." }, { status: 502 });
     if (!response.ok) {
       const requestId = response.headers.get("x-guploader-uploadid");
       const result = await response.json().catch(() => null) as { error?: { status?: string } } | null;
@@ -199,13 +212,13 @@ export async function POST(request: NextRequest) {
       console.error("Gemini request failed:", { status: response.status, providerStatus, requestId });
       if (response.status === 400 && providerStatus === "INVALID_ARGUMENT") {
         return NextResponse.json(
-          { error: "Gemini rejected the API key or request. Verify GEMINI_API_KEY in Google AI Studio and that the key is enabled for the Gemini API." },
+          { error: "Gemini rejected the API key or request. Verify your Gemini API key in Google AI Studio and confirm it is enabled for the Gemini API." },
           { status: 502 },
         );
       }
       if (response.status === 401 || response.status === 403) {
         return NextResponse.json(
-          { error: "Google Gemini rejected this API key. Create or enable a Gemini API key in Google AI Studio, update GEMINI_API_KEY, and restart the app." },
+          { error: "Google Gemini rejected all tried API keys. Create or enable valid Gemini API keys in Google AI Studio, update the app environment, and restart the app." },
           { status: 502 },
         );
       }
