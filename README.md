@@ -64,12 +64,12 @@ render.yaml                   Render blueprint
    ```dotenv
    DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DATABASE_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
    DIRECT_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DATABASE_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
-   JWT_SECRET="use-a-unique-random-secret-at-least-32-characters-long"
+   JWT_SECRET="<generate-a-unique-random-secret-of-at-least-32-characters>"
    ADMIN_EMAIL="admin@tupi.gov.ph"
-   ADMIN_PASSWORD="use-a-unique-long-password"
+   ADMIN_PASSWORD="<set-a-unique-long-admin-password>"
    ```
 
-   `DATABASE_URL` uses the transaction-mode pooler on port `6543` for app queries and seeding. `DIRECT_URL` uses the session-mode pooler on port `5432` for Prisma migrations. Replace the project reference and password with values from Supabase; URL-encode reserved password characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
+   Generate `JWT_SECRET` instead of copying the placeholder (for example, run `node -p "require('node:crypto').randomBytes(32).toString('hex')"` and paste the output). Choose a unique `ADMIN_PASSWORD` as well. `.env.example` leaves both blank so copying it cannot silently enable a known session-signing key or administrator password. `DATABASE_URL` uses the transaction-mode pooler on port `6543` for app queries and seeding. `DIRECT_URL` uses the session-mode pooler on port `5432` for Prisma migrations. Replace the project reference and password with values from Supabase; URL-encode reserved password characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
 
 4. Apply the checked-in migration, generate the Prisma client, and seed:
 

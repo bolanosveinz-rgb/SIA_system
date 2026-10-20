@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/ai/route";
+
+beforeEach(() => {
+  delete process.env.GEMINI_API_KEYS;
+});
 
 type TestImage = { mimeType: string; data: string };
 
