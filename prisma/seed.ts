@@ -44,6 +44,31 @@ async function main() {
     },
   });
 
+  const officialsEmail = process.env.OFFICIALS_EMAIL?.trim().toLowerCase();
+  const officialsPassword = process.env.OFFICIALS_PASSWORD;
+  if (officialsEmail) {
+    if (officialsEmail === email.trim().toLowerCase()) {
+      throw new Error("OFFICIALS_EMAIL must be different from ADMIN_EMAIL.");
+    }
+    if (!officialsPassword) {
+      throw new Error("OFFICIALS_PASSWORD must be set when OFFICIALS_EMAIL is configured.");
+    }
+    await prisma.user.upsert({
+      where: { email: officialsEmail },
+      create: {
+        name: process.env.OFFICIALS_NAME ?? "ServeLink Officials",
+        email: officialsEmail,
+        passwordHash: await hash(officialsPassword, 12),
+        role: Role.OFFICIALS,
+      },
+      update: {
+        name: process.env.OFFICIALS_NAME ?? "ServeLink Officials",
+        passwordHash: await hash(officialsPassword, 12),
+        role: Role.OFFICIALS,
+      },
+    });
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const resident = await prisma.user.upsert({
     where: { email: "resident@example.com" },

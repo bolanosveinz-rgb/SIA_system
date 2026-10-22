@@ -4,7 +4,7 @@ ServeLink is a community reporting and information platform connecting residents
 
 ## What is included
 
-- Resident registration and email/phone sign-in; invite-only administrator sign-in.
+- Resident registration and email/phone sign-in; invite-only administrator and officials sign-in.
 - HTTP-only signed JWT session cookies, bcrypt password hashes, Zod validation, role checks on API routes, same-origin mutation checks, and per-process authentication/API rate limits.
 - Public community home and official news feed, with expandable long descriptions. Residents sign in to use the Gemini chatbot, like or comment on updates, and open the report map, their reports, or their profile.
 - Community news previews show up to six words before expanding to the full description.
@@ -14,7 +14,8 @@ ServeLink is a community reporting and information platform connecting residents
 - Administrator sign-in uses a responsive split-panel layout with LGU access guidance.
 - Interactive Tupi boundary map, report pins, report-density heat layer, reverse geocoding, signed Cloudinary uploads, and resident report/status tracking in the signed-in resident portal.
 - LGU dashboard, live report notifications using database-backed notification records and short polling, reports with filters/status/remarks, resident directory, news moderation/CRUD, and editable administrator profile/password.
-- PostgreSQL schema, initial migration, and an idempotent seed script. Production seeding creates only the administrator; local seeding also creates sample data.
+- Officials dashboard limited to news updates and community announcements.
+- PostgreSQL schema, migrations, and an idempotent seed script. Production seeding creates the administrator and optionally an officials account; local seeding also creates sample data.
 
 ## Project structure
 
@@ -22,10 +23,11 @@ ServeLink is a community reporting and information platform connecting residents
 prisma/
   migrations/                 PostgreSQL migration history
   schema.prisma               Data models, relations, roles and indexes
-  seed.ts                     Admin account and local demo data
+  seed.ts                     Admin/officials accounts and local demo data
 src/
   app/
     admin/                    Protected LGU dashboard and workspace
+    officials/                Protected announcements workspace
     api/                      Next.js Route Handlers
     login/ register/          Resident authentication pages
     map/ my-reports/          Community map and resident report status
@@ -67,9 +69,11 @@ render.yaml                   Render blueprint
    JWT_SECRET="<generate-a-unique-random-secret-of-at-least-32-characters>"
    ADMIN_EMAIL="admin@tupi.gov.ph"
    ADMIN_PASSWORD="<set-a-unique-long-admin-password>"
+   OFFICIALS_EMAIL="officials@tupi.gov.ph"
+   OFFICIALS_PASSWORD="<set-a-unique-long-officials-password>"
    ```
 
-   Generate `JWT_SECRET` instead of copying the placeholder (for example, run `node -p "require('node:crypto').randomBytes(32).toString('hex')"` and paste the output). Choose a unique `ADMIN_PASSWORD` as well. `.env.example` leaves both blank so copying it cannot silently enable a known session-signing key or administrator password. `DATABASE_URL` uses the transaction-mode pooler on port `6543` for app queries and seeding. `DIRECT_URL` uses the session-mode pooler on port `5432` for Prisma migrations. Replace the project reference and password with values from Supabase; URL-encode reserved password characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
+   Generate `JWT_SECRET` instead of copying the placeholder (for example, run `node -p "require('node:crypto').randomBytes(32).toString('hex')"` and paste the output). Choose unique passwords for the administrator and officials accounts. The officials account is created only when both `OFFICIALS_EMAIL` and `OFFICIALS_PASSWORD` are configured; leave them blank to skip it. `.env.example` leaves passwords blank so copying it cannot silently enable a known credential. `DATABASE_URL` uses the transaction-mode pooler on port `6543` for app queries and seeding. `DIRECT_URL` uses the session-mode pooler on port `5432` for Prisma migrations. Replace the project reference and password with values from Supabase; URL-encode reserved password characters such as `@`, `:`, `/`, `#`, or `?`. Keep `.env` private; it is ignored by Git.
 
 4. Apply the checked-in migration, generate the Prisma client, and seed:
 
@@ -79,7 +83,7 @@ render.yaml                   Render blueprint
    npm run db:seed
    ```
 
-   The seed script enforces the configured administrator role and password; rerunning it resets that account to the `ADMIN_*` values above. For local development, `NODE_ENV` is normally unset, so seeding also creates a sample resident (`resident@example.com` / `Resident123!`), a welcome news post, and a sample report. These sample accounts and records are **not** seeded when `NODE_ENV=production`.
+   The seed script enforces the configured administrator role and password; rerunning it resets that account to the `ADMIN_*` values above. When configured, the officials account is seeded with the `OFFICIALS_*` values above and can sign in at `/officials/login`. For local development, `NODE_ENV` is normally unset, so seeding also creates a sample resident (`resident@example.com` / `Resident123!`), a welcome news post, and a sample report. These sample accounts and records are **not** seeded when `NODE_ENV=production`.
 
 5. Start the application:
 
@@ -87,7 +91,7 @@ render.yaml                   Render blueprint
    npm run dev
    ```
 
-   Open <http://localhost:3000>. Resident registration is public; administrator credentials come from the seed environment variables. Do not use the sample administrator values in production.
+   Open <http://localhost:3000>. Resident registration is public; administrator and officials credentials come from the seed environment variables. Do not use sample credentials in production.
 
 6. If sign-up reports a database configuration/schema issue, open `/api/health` on the same app origin. A healthy response is `{"status":"ok","database":"ready"}`. For a missing or outdated schema, set `DATABASE_URL` and `DIRECT_URL` in the environment of the app actually serving the registration page, then run `npm run db:deploy` and restart/redeploy the app.
 

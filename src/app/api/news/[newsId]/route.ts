@@ -10,7 +10,7 @@ type Context = { params: Promise<{ newsId: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Context) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const { user, response } = await requireUser(Role.ADMIN);
+  const { user, response } = await requireUser([Role.ADMIN, Role.OFFICIALS]);
   if (!user) return response;
   try {
     const { newsId } = await params;
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
 
 export async function DELETE(request: NextRequest, { params }: Context) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const { user, response } = await requireUser(Role.ADMIN);
+  const { user, response } = await requireUser([Role.ADMIN, Role.OFFICIALS]);
   if (!user) return response;
   try {
     const { newsId } = await params;

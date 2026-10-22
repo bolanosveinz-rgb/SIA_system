@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const user = await getSessionUser();
     const posts = await prisma.news.findMany({
-      where: user?.role === Role.ADMIN ? {} : { published: true },
+      where: user?.role === Role.ADMIN || user?.role === Role.OFFICIALS ? {} : { published: true },
       orderBy: { createdAt: "desc" },
       include: {
         author: { select: { name: true, adminProfile: { select: { profilePhotoUrl: true } } } },
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const { user, response } = await requireUser(Role.ADMIN);
+  const { user, response } = await requireUser([Role.ADMIN, Role.OFFICIALS]);
   if (!user) return response;
   try {
     const parsed = newsSchema.safeParse(await request.json());

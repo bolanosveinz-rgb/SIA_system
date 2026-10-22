@@ -48,7 +48,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       typeof payload.sub !== "string" ||
       typeof payload.name !== "string" ||
       typeof payload.email !== "string" ||
-      (payload.role !== Role.ADMIN && payload.role !== Role.RESIDENT)
+      (payload.role !== Role.ADMIN && payload.role !== Role.RESIDENT && payload.role !== Role.OFFICIALS)
     ) {
       return null;
     }
@@ -66,12 +66,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 }
 
-export async function requireUser(role?: Role) {
+export async function requireUser(role?: Role | Role[]) {
   const user = await getSessionUser();
   if (!user) {
     return { user: null, response: NextResponse.json({ error: "Please sign in to continue." }, { status: 401 }) };
   }
-  if (role && user.role !== role) {
+  if (role && (Array.isArray(role) ? !role.includes(user.role) : user.role !== role)) {
     return { user: null, response: NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 }) };
   }
   return { user, response: null };

@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, { params }: Context) {
     const { newsId } = await params;
     const viewer = await getSessionUser();
     const post = await prisma.news.findFirst({
-      where: { id: newsId, ...(viewer?.role === Role.ADMIN ? {} : { published: true }) },
+      where: { id: newsId, ...(viewer?.role === Role.ADMIN || viewer?.role === Role.OFFICIALS ? {} : { published: true }) },
       select: { id: true },
     });
     if (!post) return NextResponse.json({ error: "This news post was not found." }, { status: 404 });
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: Context) {
 export async function DELETE(request: NextRequest, { params }: Context) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
   const user = await getSessionUser();
-  if (!user || user.role !== Role.ADMIN) return NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 });
+  if (!user || (user.role !== Role.ADMIN && user.role !== Role.OFFICIALS)) return NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 });
   const commentId = request.nextUrl.searchParams.get("commentId");
   if (!commentId) return NextResponse.json({ error: "A comment ID is required." }, { status: 400 });
   try {

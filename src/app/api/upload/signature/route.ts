@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   if (!body.success) return NextResponse.json({ error: "Choose a valid image or video upload type." }, { status: 400 });
   const resourceType = body.data.resourceType;
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = user.role === Role.ADMIN ? "servelink/news" : "servelink/reports";
+  const folder = user.role === Role.ADMIN || user.role === Role.OFFICIALS ? "servelink/news" : "servelink/reports";
   const allowedFormats = resourceType === "video" ? "mp4,mov,webm" : "jpg,jpeg,png,webp";
   const params = `allowed_formats=${allowedFormats}&folder=${folder}&timestamp=${timestamp}${apiSecret}`;
   const signature = createHash("sha1").update(params).digest("hex");
