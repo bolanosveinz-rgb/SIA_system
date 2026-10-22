@@ -7,7 +7,7 @@ export default function OfficialsLoginPage() {
   return <main className="min-h-screen bg-[#f5f8fb] p-3 dark:bg-[#0b1421] sm:p-5 lg:p-7">
     <div className="mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-[1440px] overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_32px_100px_rgba(18,54,90,.14)] dark:border-slate-700 dark:bg-[var(--surface)] lg:min-h-[calc(100vh-3.5rem)] lg:grid-cols-[1.02fr_.98fr]">
       <section className="relative hidden overflow-hidden bg-[#102e4d] px-10 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-16 xl:py-14">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_10%,rgba(35,178,164,.28),transparent_42%),radial-gradient(ellipse_at_85%_90%,rgba(67,128,207,.28),transparent_45%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_10%,rgba(199,168,99,.24),transparent_42%),radial-gradient(ellipse_at_85%_90%,rgba(67,128,207,.22),transparent_45%)]" />
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <BrandLogo className="h-12 w-12 rounded-xl object-contain ring-1 ring-white/25" />

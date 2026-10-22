@@ -21,7 +21,7 @@ type MapReport = {
 
 const pinIcon = L.divIcon({
   className: "",
-  html: '<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;background:#0d9b91;border:3px solid white;box-shadow:0 4px 12px #12365a55;transform:rotate(-45deg)"></div>',
+  html: '<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;background:#b18a3a;border:3px solid white;box-shadow:0 4px 12px #12365a55;transform:rotate(-45deg)"></div>',
   iconSize: [30, 30],
   iconAnchor: [15, 28],
 });
@@ -49,7 +49,7 @@ function HeatLayer({ reports }: { reports: MapReport[] }) {
       radius: 30,
       blur: 22,
       maxZoom: 14,
-      gradient: { 0.25: "#45c4b6", 0.55: "#facc5c", 0.82: "#f0784b", 1: "#e43b52" },
+      gradient: { 0.25: "#b18a3a", 0.55: "#facc5c", 0.82: "#f0784b", 1: "#e43b52" },
     });
     heat.addTo(map);
     return () => { map.removeLayer(heat); };
@@ -72,7 +72,7 @@ export function CommunityMap({
   return <div className="relative z-0 overflow-hidden rounded-2xl border border-[var(--line)]" style={{ height }}>
     <MapContainer center={TUPI_CENTER} zoom={13} minZoom={11} maxZoom={18} maxBounds={bounds} maxBoundsViscosity={1} scrollWheelZoom className="h-full w-full" aria-label="Interactive map of Tupi, South Cotabato">
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <GeoJSON data={TUPI_BOUNDARY} style={{ color: "#0d9b91", weight: 2, fillColor: "#0d9b91", fillOpacity: 0.07 }} />
+      <GeoJSON data={TUPI_BOUNDARY} style={{ color: "#b18a3a", weight: 2, fillColor: "#b18a3a", fillOpacity: 0.07 }} />
       <ClickHandler onSelect={onSelect} />
       <HeatLayer reports={reports} />
       {reports.map((report) => <Marker key={report.id} position={[report.lat, report.lng]} icon={reportIcon}>
