@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { CalendarDays, Filter, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, FileText, Filter, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Input, StatusBadge, Textarea } from "@/components/ui";
 import { BARANGAYS } from "@/lib/places";
@@ -14,7 +14,7 @@ const CommunityMap = dynamic(() => import("@/components/community-map").then((mo
 
 type Report = {
   id: string; title: string; description: string; lat: number; lng: number; address: string;
-  barangay: string; status: string; photoUrl: string | null; remarks: string | null; createdAt: string;
+  barangay: string; status: string; photoUrl: string | null; remarks: string | null; createdAt: string; updatedAt: string;
   resident: { name: string; email: string; residentProfile: { phone: string; address: string; barangay: string; profilePhotoUrl: string | null } | null };
 };
 
@@ -23,6 +23,7 @@ export default function AdminReportsPage() {
   const [selected, setSelected] = useState<Report | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [view, setView] = useState<"reports" | "accomplishments">("reports");
   const [barangay, setBarangay] = useState("ALL");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -30,13 +31,13 @@ export default function AdminReportsPage() {
   const [updating, setUpdating] = useState(false);
 
   const loadReports = useCallback(async () => {
-    const params = new URLSearchParams({ search, status, barangay, from, to });
+    const params = new URLSearchParams({ search, status: view === "accomplishments" ? "RESOLVED" : status, barangay, from, to });
     const response = await fetch(`/api/reports?${params}`);
     if (!response.ok) throw new Error((await response.json()).error ?? "Reports could not be loaded.");
     const result = await response.json();
     setReports(result.reports);
-    setSelected((current) => current ? (result.reports.find((item: Report) => item.id === current.id) ?? current) : null);
-  }, [search, status, barangay, from, to]);
+    setSelected((current) => current ? (result.reports.find((item: Report) => item.id === current.id) ?? null) : null);
+  }, [search, status, view, barangay, from, to]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -74,20 +75,24 @@ export default function AdminReportsPage() {
 
   return <div className="space-y-6">
     <div><p className="text-xs font-bold uppercase tracking-[.15em] text-[#0d9b91]">Community follow-up</p><h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Resident reports</h1><p className="mt-1 text-sm text-[var(--muted)]">Review concerns and keep residents updated on their progress.</p></div>
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Report views">
+      <button type="button" aria-pressed={view === "reports"} onClick={() => setView("reports")} className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${view === "reports" ? "bg-[#12365a] text-white dark:bg-[#a8d1ff] dark:text-[#10253b]" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--background)]"}`}><FileText size={16} /> Resident reports</button>
+      <button type="button" aria-pressed={view === "accomplishments"} onClick={() => setView("accomplishments")} className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition ${view === "accomplishments" ? "bg-emerald-700 text-white dark:bg-emerald-800" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--background)]"}`}><CheckCircle2 size={16} /> Accomplishment report</button>
+    </div>
     <Card className="p-4">
-      <div className="mb-3 flex items-center gap-2 text-xs font-bold text-[var(--muted)]"><Filter size={14} /> Filter reports</div>
+      <div className="mb-3 flex items-center gap-2 text-xs font-bold text-[var(--muted)]"><Filter size={14} /> {view === "accomplishments" ? "Filter resolved reports" : "Filter reports"}</div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="relative sm:col-span-2 xl:col-span-1"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" /><Input aria-label="Search reports" placeholder="Search reports…" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" /></div>
-        <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)} className="min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm"><option value="ALL">All statuses</option><option value="PENDING">Pending</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select>
+        <select aria-label="Filter by status" value={view === "accomplishments" ? "RESOLVED" : status} onChange={(event) => setStatus(event.target.value)} disabled={view === "accomplishments"} className="min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm disabled:opacity-70"><option value="ALL">All statuses</option><option value="PENDING">Pending</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select>
         <select aria-label="Filter by barangay" value={barangay} onChange={(event) => setBarangay(event.target.value)} className="min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm"><option value="ALL">All barangays</option>{BARANGAYS.map((place) => <option key={place}>{place}</option>)}</select>
         <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5"><CalendarDays size={15} className="shrink-0 text-[var(--muted)]" /><input aria-label="From date" type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="min-w-0 bg-transparent text-xs outline-none" /></label>
         <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5"><CalendarDays size={15} className="shrink-0 text-[var(--muted)]" /><input aria-label="To date" type="date" value={to} onChange={(event) => setTo(event.target.value)} className="min-w-0 bg-transparent text-xs outline-none" /></label>
       </div>
     </Card>
     <div className="grid gap-5 xl:grid-cols-[1fr_1.05fr]">
-      <Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-4"><div className="flex items-center gap-2 font-bold"><SlidersHorizontal size={16} className="text-[#0d9b91]" /> Reports <span className="rounded-full bg-[var(--background)] px-2 py-0.5 text-xs text-[var(--muted)]">{reports.length}</span></div></div>
-        <div className="max-h-[650px] divide-y divide-[var(--line)] overflow-auto">{reports.map((report) => <button key={report.id} onClick={() => chooseReport(report)} className={`w-full px-4 py-4 text-left transition hover:bg-[var(--background)] ${selected?.id === report.id ? "bg-[var(--accent-soft)]/60" : ""}`}><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[#0d9b91]">{report.resident.residentProfile?.profilePhotoUrl ? <img src={report.resident.residentProfile.profilePhotoUrl} alt="" className="h-full w-full object-cover" /> : report.resident.name.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{report.title}</p><p className="mt-1 truncate text-xs text-[var(--muted)]">{report.resident.name} · {report.barangay || "Tupi"}</p></div></div><StatusBadge status={report.status} /></div><p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--muted)]">{report.description}</p><p className="mt-2 text-[10px] text-[var(--muted)]">{new Date(report.createdAt).toLocaleString("en-PH")}</p></button>)}
-        {!reports.length && <div className="px-4 py-12 text-center text-sm text-[var(--muted)]">No reports match these filters.</div>}</div>
+      <Card className="overflow-hidden"><div className="border-b border-[var(--line)] px-4 py-4"><div className="flex items-center gap-2 font-bold">{view === "accomplishments" ? <CheckCircle2 size={16} className="text-emerald-600" /> : <SlidersHorizontal size={16} className="text-[#0d9b91]" />} {view === "accomplishments" ? "Accomplishment report" : "Reports"} <span className="rounded-full bg-[var(--background)] px-2 py-0.5 text-xs text-[var(--muted)]">{reports.length}</span></div>{view === "accomplishments" && <p className="mt-1 text-xs text-[var(--muted)]">Resolved concerns reported by residents, with completion notes and dates.</p>}</div>
+        <div className="max-h-[650px] divide-y divide-[var(--line)] overflow-auto">{reports.map((report) => <button key={report.id} onClick={() => chooseReport(report)} className={`w-full px-4 py-4 text-left transition hover:bg-[var(--background)] ${selected?.id === report.id ? "bg-[var(--accent-soft)]/60" : ""}`}><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--accent-soft)] text-xs font-bold text-[#0d9b91]">{report.resident.residentProfile?.profilePhotoUrl ? <img src={report.resident.residentProfile.profilePhotoUrl} alt="" className="h-full w-full object-cover" /> : report.resident.name.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{report.title}</p><p className="mt-1 truncate text-xs text-[var(--muted)]">{report.resident.name} · {report.barangay || "Tupi"}</p></div></div><StatusBadge status={report.status} /></div><p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--muted)]">{report.description}</p>{view === "accomplishments" && report.remarks && <p className="mt-2 line-clamp-2 text-xs leading-5 text-emerald-700 dark:text-emerald-300">Completion note: {report.remarks}</p>}<p className="mt-2 text-[10px] text-[var(--muted)]">{view === "accomplishments" ? "Last updated " : "Submitted "}{new Date(view === "accomplishments" ? report.updatedAt : report.createdAt).toLocaleString("en-PH")}</p></button>)}
+        {!reports.length && <div className="px-4 py-12 text-center text-sm text-[var(--muted)]">{view === "accomplishments" ? "No resolved reports match these filters." : "No reports match these filters."}</div>}</div>
       </Card>
       <div className="space-y-4">{selected ? <Card className="overflow-hidden">
         <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] p-4"><div><h2 className="font-bold">{selected.title}</h2><p className="mt-1 text-xs text-[var(--muted)]">Submitted {new Date(selected.createdAt).toLocaleString("en-PH")}</p></div><button onClick={() => setSelected(null)} aria-label="Close report details" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--background)]"><X size={17} /></button></div>
