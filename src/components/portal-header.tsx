@@ -33,6 +33,7 @@ function pageTitle(pathname: string, role: PortalRole) {
   if (role === "ADMIN") {
     if (pathname === "/admin") return ["Overview", "Municipality workspace"];
     if (pathname.startsWith("/admin/reports")) return ["Reports", "Review and follow up on resident concerns"];
+    if (pathname.startsWith("/admin/announcements")) return ["Announcements", "Send important updates to residents"];
     if (pathname.startsWith("/admin/users")) return ["Residents", "Resident directory and account details"];
     if (pathname.startsWith("/admin/news")) return ["News & updates", "Community announcements"];
     if (pathname.startsWith("/admin/settings")) return ["Settings", "Manage your LGU profile"];
@@ -61,6 +62,8 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
   const [markingRead, setMarkingRead] = useState(false);
   const [loadError, setLoadError] = useState("");
   const notificationBox = useRef<HTMLDivElement>(null);
+  const seenNotificationIds = useRef(new Set<string>());
+  const hasLoadedNotifications = useRef(false);
   const title = pageTitle(pathname, role);
   const notificationUrl = role === "ADMIN" ? "/api/admin/notifications" : "/api/resident/notifications";
   const reportUrl = role === "ADMIN" ? "/admin/reports" : "/my-reports";
@@ -89,7 +92,19 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
         if (!response.ok) throw new Error(result.error ?? "Notifications could not be loaded.");
         if (active) {
           setUnread(result.unread);
-          if (open) setNotifications(result.notifications);
+          const incoming = result.notifications as Notification[];
+          if (role === "RESIDENT") {
+            const isInitialLoad = !hasLoadedNotifications.current;
+            for (const notification of incoming) {
+              const isNewAnnouncement = notification.type === "ANNOUNCEMENT" && !seenNotificationIds.current.has(notification.id);
+              if (isNewAnnouncement && (!isInitialLoad || !notification.readAt)) {
+                toast.info(notification.message, { duration: 10000 });
+              }
+              seenNotificationIds.current.add(notification.id);
+            }
+          }
+          hasLoadedNotifications.current = true;
+          if (open) setNotifications(incoming);
           hasShownError = false;
         }
       } catch (error) {
@@ -105,7 +120,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
       active = false;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, notificationUrl, open]);
+  }, [isAuthenticated, notificationUrl, open, role]);
 
   useEffect(() => {
     if (!open) return;
@@ -165,6 +180,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
 
   function notificationHref(notification: Notification) {
     if (role === "ADMIN") return notification.report ? `/admin/reports?reportId=${encodeURIComponent(notification.report.id)}` : "/admin/reports";
+    if (notification.type === "ANNOUNCEMENT") return "/";
     return notification.report ? `/my-reports?reportId=${encodeURIComponent(notification.report.id)}` : "/my-reports";
   }
 
@@ -209,7 +225,7 @@ export function PortalHeader({ role, isAuthenticated = true, name, email, profil
               {loading && !notifications.length ? <div className="space-y-3 p-4"><div className="h-3 w-2/3 animate-pulse rounded bg-[var(--line)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /><div className="h-10 animate-pulse rounded-xl bg-[var(--background)]" /></div>
                 : loadError ? <div className="p-5 text-center"><p className="text-sm text-rose-600">{loadError}</p><button type="button" onClick={() => void loadNotifications()} className="mt-2 text-xs font-bold text-[#0d9b91] hover:underline">Try again</button></div>
                   : notifications.length ? <ul className="divide-y divide-[var(--line)]">{notifications.map((notification) => <li key={notification.id}><Link href={notificationHref(notification)} onClick={() => setOpen(false)} className={cn("block px-4 py-3.5 transition hover:bg-[var(--background)]", !notification.readAt && "bg-[var(--accent-soft)]/45")}><div className="flex gap-3"><span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", notification.readAt ? "bg-[var(--line)]" : "bg-[#0d9b91]")} /><span className="min-w-0 flex-1"><span className="block text-xs font-semibold leading-5">{notification.message}</span><span className="mt-1 block text-[10px] text-[var(--muted)]">{timeLabel(notification.createdAt)}</span></span><ChevronDown size={14} className="-rotate-90 self-center text-[var(--muted)]" /></div></Link></li>)}</ul>
-                    : <div className="px-5 py-10 text-center"><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[#0d9b91]"><Bell size={19} /></span><p className="mt-3 text-sm font-semibold">No notifications yet</p><p className="mt-1 text-xs text-[var(--muted)]">Updates about your reports will appear here.</p></div>}
+                    : <div className="px-5 py-10 text-center"><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[#0d9b91]"><Bell size={19} /></span><p className="mt-3 text-sm font-semibold">No notifications yet</p><p className="mt-1 text-xs text-[var(--muted)]">Community announcements and report updates will appear here.</p></div>}
             </div>
             <Link href={reportUrl} onClick={() => setOpen(false)} className="block border-t border-[var(--line)] px-4 py-3 text-center text-xs font-bold text-[#0d9b91] transition hover:bg-[var(--background)]">{role === "ADMIN" ? "Go to reports" : "View my reports"}</Link>
           </section>}

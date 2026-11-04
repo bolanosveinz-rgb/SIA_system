@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { registerSchema, reportSchema } from "@/lib/validation";
+import { announcementSchema, registerSchema, reportSchema } from "@/lib/validation";
 
 test("accepts a valid resident registration and normalizes email", () => {
   const result = registerSchema.safeParse({
@@ -68,4 +68,15 @@ test("rejects non-Cloudinary or insecure report image URLs", () => {
     photoUrl: "https://example.com/photo.jpg",
   });
   assert.equal(result.success, false);
+});
+
+test("trims and accepts resident announcement text", () => {
+  const result = announcementSchema.safeParse({ message: "  Beware of landslides near the mountain roads.  " });
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.message, "Beware of landslides near the mountain roads.");
+});
+
+test("rejects blank or overly long announcements", () => {
+  assert.equal(announcementSchema.safeParse({ message: "  " }).success, false);
+  assert.equal(announcementSchema.safeParse({ message: "a".repeat(451) }).success, false);
 });

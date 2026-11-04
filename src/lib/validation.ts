@@ -46,3 +46,7 @@ export const newsSchema = z.object({
     type: z.enum(["IMAGE", "VIDEO"]),
   })).max(5).default([]),
 });
+
+export const announcementSchema = z.object({
+  message: z.string().trim().min(3, "Write an announcement with at least 3 characters.").max(450, "Announcements must be 450 characters or fewer."),
+});
