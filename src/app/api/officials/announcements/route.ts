@@ -7,7 +7,7 @@ import { announcementSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: "Request origin could not be verified." }, { status: 403 });
-  const { user, response } = await requireUser(Role.ADMIN);
+  const { user, response } = await requireUser(Role.OFFICIALS);
   if (!user) return response;
   try {
     const parsed = announcementSchema.safeParse(await request.json());
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       data: residents.map(({ id }) => ({
         userId: id,
         type: NotificationType.ANNOUNCEMENT,
-        message: `Community announcement: ${parsed.data.message}`,
+        message: `Officials: ${parsed.data.message}`,
       })),
     });
     return NextResponse.json({ recipients: result.count }, { status: 201 });

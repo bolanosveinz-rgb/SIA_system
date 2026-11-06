@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
   const adminPage = route.startsWith("/admin");
   const adminApi = route.startsWith("/api/admin");
   const officialsPage = route.startsWith("/officials");
+  const officialsApi = route.startsWith("/api/officials");
   const officialsLogin = route === "/officials/login";
   const residentPage = ["/map", "/my-reports", "/profile"].some((path) => route === path || route.startsWith(`${path}/`));
   const residentOnlyPage = ["/my-reports", "/profile"].some((path) => route === path || route.startsWith(`${path}/`));
@@ -23,7 +24,7 @@ export async function middleware(request: NextRequest) {
   const authPage = route === "/login" || route === "/register" || route === "/admin/login" || officialsLogin;
 
   if (!token) {
-    if (adminApi) return NextResponse.json({ error: "Please sign in to continue." }, { status: 401 });
+    if (adminApi || officialsApi) return NextResponse.json({ error: "Please sign in to continue." }, { status: 401 });
     if (aiApi) return NextResponse.json({ error: "Please sign in to use the community assistant." }, { status: 401 });
     if (adminPage && route !== "/admin/login") {
       return NextResponse.redirect(new URL("/admin/login", request.url));
@@ -52,6 +53,7 @@ export async function middleware(request: NextRequest) {
       if (adminApi) return NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 });
       return NextResponse.redirect(new URL("/", request.url));
     }
+    if (officialsApi && !isOfficials) return NextResponse.json({ error: "You do not have permission to do that." }, { status: 403 });
     if (officialsPage && !officialsLogin && !isOfficials) {
       return NextResponse.redirect(new URL(isAdmin ? "/admin" : "/", request.url));
     }
@@ -67,7 +69,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     console.error("Protected-route session verification failed:", error);
-    const response = adminApi
+    const response = adminApi || officialsApi
       ? NextResponse.json({ error: "Your session has expired. Please sign in again." }, { status: 401 })
       : adminPage
         ? NextResponse.redirect(new URL("/admin/login", request.url))
@@ -86,5 +88,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/api/admin/:path*", "/api/ai", "/map/:path*", "/my-reports/:path*", "/profile/:path*", "/login", "/register", "/admin/login", "/officials/:path*"],
+  matcher: ["/", "/admin/:path*", "/api/admin/:path*", "/api/officials/:path*", "/api/ai", "/map/:path*", "/my-reports/:path*", "/profile/:path*", "/login", "/register", "/admin/login", "/officials/:path*"],
 };
