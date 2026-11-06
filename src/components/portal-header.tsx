@@ -33,6 +33,7 @@ function pageTitle(pathname: string, role: PortalRole) {
   if (role === "ADMIN") {
     if (pathname === "/admin") return ["Overview", "Municipality workspace"];
     if (pathname.startsWith("/admin/reports")) return ["Reports", "Review and follow up on resident concerns"];
+    if (pathname.startsWith("/admin/announcements")) return ["Announcements", "Send important updates to residents"];
     if (pathname.startsWith("/admin/users")) return ["Residents", "Resident directory and account details"];
     if (pathname.startsWith("/admin/news")) return ["News & updates", "Community announcements"];
     if (pathname.startsWith("/admin/settings")) return ["Settings", "Manage your LGU profile"];

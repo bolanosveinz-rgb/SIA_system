@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, FileText, LayoutDashboard, LogOut, Settings, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, LayoutDashboard, LogOut, Megaphone, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/components/ui";
 import { BrandLogo } from "@/components/brand-logo";
@@ -12,6 +12,7 @@ import { PortalHeader } from "@/components/portal-header";
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/reports", label: "Reports", icon: FileText },
+  { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
   { href: "/admin/users", label: "Residents", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
